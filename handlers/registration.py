@@ -15,6 +15,7 @@ class Form(StatesGroup):
     name = State()
     age = State()
     drink = State()
+    about = State()
     location = State()
     photo = State()
 
@@ -59,6 +60,14 @@ async def process_age(message: Message, state: FSMContext):
 async def process_drink(message: Message, state: FSMContext):
     drink = message.text if message.text != "/skip" else "Кофе"
     await state.update_data(drink=drink)
+    await message.answer("Где ты обычно бываешь? Поделись локацией, чтобы найти подруг рядом.", reply_markup=kb_geo)
+    await state.set_state(Form.about)
+
+@router.message(Form.about)
+async def process_about(message: Message, state: FSMContext):
+    about = message.text if message.text != "/skip" else "Пока ничего не рассказала"
+    await state.update_data(about=about)
+    # Теперь переходим к локации
     await message.answer("Где ты обычно бываешь? Поделись локацией, чтобы найти подруг рядом.", reply_markup=kb_geo)
     await state.set_state(Form.location)
 
