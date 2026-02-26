@@ -1,48 +1,51 @@
-import ssl
 import os
-import certifi  # <-- Новое
-from motor.motor_asyncio import AsyncIOMotorClient
+import asyncpg
 from dotenv import load_dotenv
 
 load_dotenv()
-MONGO_URL = os.getenv("MONGO_URL")
-
-# Создаем клиент с использованием надежных сертификатов certifi
-client = AsyncIOMotorClient(
-    MONGO_URL,
-    tls=True,
-    tlsCAFile=certifi.where(), # <-- Вот это решает проблему SSL
-    tlsAllowInvalidCertificates=True,
-    serverSelectionTimeoutMS=5000
-)
-
-db = client['bar_bot_db']
-users_collection = db['users']
-likes_collection = db['likes']
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 async def init_db():
-    """Проверка связи с облаком"""
+    """Создает таблицу при первом запуске"""
+    conn = await asyncpg.connect(DATABASE_URL)
     try:
-        # Убедись, что тут client, а не cluster!
-        await client.admin.command('ping')
-        print("Связь с MongoDB установлена! ✅")
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                user_id BIGINT PRIMARY KEY,
+                name TEXT,
+                age INTEGER,
+                drink TEXT,
+                about TEXT,
+                photo_id TEXT
+            )
+        ''')
+        print("Связь с базой Supabase установлена! ✅")
     except Exception as e:
         print(f"Ошибка базы: {e}")
+    finally:
+        await conn.close()
 
 async def user_exists(user_id):
-    """Проверяет, есть ли пользователь в базе"""
-    user = await users_collection.find_one({"user_id": user_id})
-    return user is not None
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        user = await conn.fetchrow('SELECT user_id FROM users WHERE user_id = $1', user_id)
+        return user is not None
+    finally:
+        await conn.close()
 
 async def save_user(user_id, data):
-    """Сохраняет профиль (имя, возраст, фото, локация и т.д.)"""
-    # Мы добавляем user_id в сам объект данных для удобства
-    data["user_id"] = user_id
-    await users_collection.update_one(
-        {"user_id": user_id},
-        {"$set": data},
-        upsert=True
-    )
+    """Сохраняет профиль в Supabase"""
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        await conn.execute('''
+            INSERT INTO users (user_id, name, age, drink, about, photo_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (user_id) DO UPDATE 
+            SET name = EXCLUDED.name, age = EXCLUDED.age, drink = EXCLUDED.drink, 
+                about = EXCLUDED.about, photo_id = EXCLUDED.photo_id
+        ''', user_id, data.get('name'), data.get('age'), data.get('drink'), data.get('about'), data.get('photo'))
+    finally:
+        await conn.close()
 
 async def get_users_nearby(exclude_user_id, lat, lon):
     """Тот самый поиск людей рядом (твоя логика с delta)"""
