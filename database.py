@@ -12,11 +12,13 @@ client = AsyncIOMotorClient(
     tls=True,
     tlsAllowInvalidCertificates=True
 )
-
+db = client['bar_bot_db']           # Подключаемся к базе
+users_collection = db['users']
+likes_collection = db['likes']
 async def init_db():
     """Проверка связи с облаком"""
     try:
-        await cluster.admin.command('ping')
+        await client.admin.command('ping')
         print("Связь с MongoDB установлена! ✅")
     except Exception as e:
         print(f"Ошибка базы: {e}")
