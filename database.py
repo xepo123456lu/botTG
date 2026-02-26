@@ -1,23 +1,29 @@
 import ssl
 import os
+import certifi  # <-- Новое
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# Подключение к облаку
 MONGO_URL = os.getenv("MONGO_URL")
+
+# Создаем клиент с использованием надежных сертификатов certifi
 client = AsyncIOMotorClient(
     MONGO_URL,
     tls=True,
-    tlsAllowInvalidCertificates=True
+    tlsCAFile=certifi.where(), # <-- Вот это решает проблему SSL
+    tlsAllowInvalidCertificates=True,
+    serverSelectionTimeoutMS=5000
 )
-db = client['bar_bot_db']           # Подключаемся к базе
+
+db = client['bar_bot_db']
 users_collection = db['users']
 likes_collection = db['likes']
+
 async def init_db():
     """Проверка связи с облаком"""
     try:
+        # Убедись, что тут client, а не cluster!
         await client.admin.command('ping')
         print("Связь с MongoDB установлена! ✅")
     except Exception as e:
