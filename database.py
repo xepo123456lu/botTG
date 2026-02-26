@@ -1,3 +1,4 @@
+import ssl
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
@@ -6,10 +7,11 @@ load_dotenv()
 
 # Подключение к облаку
 MONGO_URL = os.getenv("MONGO_URL")
-cluster = AsyncIOMotorClient(MONGO_URL)
-db = cluster["bar_bot_db"]
-users_collection = db["users"]
-likes_collection = db["likes"]
+client = AsyncIOMotorClient(
+    MONGO_URL,
+    tls=True,
+    tlsAllowInvalidCertificates=True
+)
 
 async def init_db():
     """Проверка связи с облаком"""
