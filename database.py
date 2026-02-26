@@ -6,9 +6,9 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 async def init_db():
-    """Создает таблицу при первом запуске"""
-    conn = await asyncpg.connect(DATABASE_URL)
     try:
+        # Увеличиваем таймаут, так как пулер может отвечать чуть дольше
+        conn = await asyncpg.connect(DATABASE_URL, timeout=15)
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id BIGINT PRIMARY KEY,
@@ -19,11 +19,10 @@ async def init_db():
                 photo_id TEXT
             )
         ''')
-        print("Связь с базой Supabase установлена! ✅")
-    except Exception as e:
-        print(f"Ошибка базы: {e}")
-    finally:
         await conn.close()
+        print("Связь с базой Supabase (через Pooler) установлена! ✅")
+    except Exception as e:
+        print(f"Ошибка подключения к базе: {e}")
 
 async def user_exists(user_id):
     conn = await asyncpg.connect(DATABASE_URL)
