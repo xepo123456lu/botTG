@@ -8,7 +8,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 async def init_db():
     try:
         conn = await asyncpg.connect(DATABASE_URL, timeout=15)
-        # Добавляем колонки lat и lon, если их еще нет
+        # Создаем таблицу, если ее нет
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id BIGINT PRIMARY KEY,
@@ -26,6 +26,28 @@ async def init_db():
     except Exception as e:
         print(f"Ошибка подключения к базе: {e}")
 
+# --- НОВАЯ ФУНКЦИЯ (Которую искал бот) ---
+
+async def get_user(user_id):
+    """Получает данные одного пользователя по его ID"""
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        # fetchrow возвращает одну строку (запись) или None
+        row = await conn.fetchrow('SELECT * FROM users WHERE user_id = $1', user_id)
+        return row
+    finally:
+        await conn.close()
+
+# --- ПРОВЕРКА СУЩЕСТВОВАНИЯ ---
+
+async def user_exists(user_id):
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        user = await conn.fetchrow('SELECT user_id FROM users WHERE user_id = $1', user_id)
+        return user is not None
+    finally:
+        await conn.close()
+
 # --- ФУНКЦИИ ПОИСКА ---
 
 async def get_users_nearby(exclude_user_id, lat, lon):
@@ -33,7 +55,6 @@ async def get_users_nearby(exclude_user_id, lat, lon):
     delta = 0.08  # Примерно 8-10 км
     conn = await asyncpg.connect(DATABASE_URL)
     try:
-        # SQL запрос: фильтруем по координатам и исключаем себя
         row = await conn.fetchrow('''
             SELECT user_id, name, age, drink, photo_id, about, lat, lon 
             FROM users 
@@ -48,7 +69,7 @@ async def get_users_nearby(exclude_user_id, lat, lon):
         await conn.close()
 
 async def get_all_users(exclude_user_id):
-    """Поиск 'Везде' — просто случайная анкета из базы"""
+    """Поиск 'Везде'"""
     conn = await asyncpg.connect(DATABASE_URL)
     try:
         row = await conn.fetchrow('''
@@ -62,7 +83,7 @@ async def get_all_users(exclude_user_id):
     finally:
         await conn.close()
 
-# --- ОСТАЛЬНЫЕ ФУНКЦИИ ---
+# --- СОХРАНЕНИЕ ---
 
 async def save_user(user_id, data):
     """Сохраняет профиль (включая координаты)"""
@@ -81,22 +102,13 @@ async def save_user(user_id, data):
         await conn.close()
 
 async def add_like(liker_id, liked_id):
-    """Записывает лайк (лучше тоже в Postgres, а не в Mongo)"""
+    """Записывает лайк и проверяет на взаимность"""
     conn = await asyncpg.connect(DATABASE_URL)
     try:
-        # Создаем таблицу лайков, если её нет
         await conn.execute('CREATE TABLE IF NOT EXISTS likes (liker_id BIGINT, liked_id BIGINT)')
         await conn.execute('INSERT INTO likes (liker_id, liked_id) VALUES ($1, $2)', liker_id, liked_id)
         
-        # Проверяем на взаимность
         match = await conn.fetchval('SELECT 1 FROM likes WHERE liker_id = $1 AND liked_id = $2', liked_id, liker_id)
         return match is not None
-    finally:
-        await conn.close()
-async def user_exists(user_id):
-    conn = await asyncpg.connect(DATABASE_URL)
-    try:
-        user = await conn.fetchrow('SELECT user_id FROM users WHERE user_id = $1', user_id)
-        return user is not None
     finally:
         await conn.close()
