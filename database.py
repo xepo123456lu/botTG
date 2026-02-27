@@ -93,3 +93,10 @@ async def add_like(liker_id, liked_id):
         return match is not None
     finally:
         await conn.close()
+async def user_exists(user_id):
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        user = await conn.fetchrow('SELECT user_id FROM users WHERE user_id = $1', user_id)
+        return user is not None
+    finally:
+        await conn.close()
