@@ -14,7 +14,6 @@ router = Router()
 class Form(StatesGroup):
     name = State()
     age = State()
-    drink = State()
     about = State()
     location = State()
     photo = State()
@@ -44,23 +43,46 @@ async def cmd_start(message: Message, state: FSMContext):
 
 @router.message(Form.name)
 async def process_name(message: Message, state: FSMContext):
-    name = message.text if message.text != "/skip" else message.from_user.first_name
+    # Если пользователь ввел /skip или текст слишком короткий
+    if message.text == "/skip":
+        await message.answer("Имя — это важно! Пожалуйста, напиши, как тебя зовут.")
+        return # Прерываем функцию, стейт остается Form.name
+
+    name = message.text
     await state.update_data(name=name)
-    await message.answer(f"Приятно познакомиться, {name}! Сколько тебе лет?", reply_markup=kb_skip)
+    
+    # Для возраста оставляем возможность скипа, поэтому передаем kb_skip
+    await message.answer(
+        f"Приятно познакомиться, {name}! Сколько тебе лет?", 
+        reply_markup=kb_skip
+    )
     await state.set_state(Form.age)
 
-@router.message(Form.age)
-async def process_age(message: Message, state: FSMContext):
-    age = message.text if message.text != "/skip" else "Секрет"
-    await state.update_data(age=age)
-    await message.answer("Какой твой любимый напиток? ☕️🍷", reply_markup=kb_skip)
-    await state.set_state(Form.drink)
+from aiogram.types import ReplyKeyboardRemove
 
-@router.message(Form.drink)
-async def process_drink(message: Message, state: FSMContext):
-    drink = message.text if message.text != "/skip" else "Кофе"
-    await state.update_data(drink=drink)
-    await message.answer("Где ты обычно бываешь? Поделись локацией, чтобы найти подруг рядом.", reply_markup=kb_geo)
+@router.message(Form.age)
+async def process_age(message: types.Message, state: FSMContext):
+    # Проверяем, является ли ввод числом
+    if not message.text.isdigit():
+        await message.answer("Пожалуйста, введи возраст цифрами (например, 25).")
+        return # Останавливаем выполнение, стейт не меняется
+
+    age = int(message.text)
+
+    # Дополнительная проверка на адекватность возраста
+    if age < 18 or age > 99:
+        await message.answer("Возраст должен быть от 18 до 99 лет. Попробуй еще раз!")
+        return
+
+    # Если всё хорошо, сохраняем и идем дальше
+    await state.update_data(age=age)
+    
+    # К напитку уже можно прикрепить кнопку пропуска, если он необязателен
+    await message.answer(
+        "Какой твой любимый напиток? ☕️🍷", 
+        reply_markup=kb_skip 
+    )
+    
     await state.set_state(Form.about)
 
 @router.message(Form.about)

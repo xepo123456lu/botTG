@@ -51,3 +51,15 @@ kb_confirm = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True
 )
+# ВЫБОР РАДИУСА ПОИСКА
+def get_search_type_keyboard():
+    """
+    Создает выбор: искать только рядом или по всей базе.
+    """
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="📍 Рядом со мной", callback_data="search_near"),
+            InlineKeyboardButton(text="🌍 Везде", callback_data="search_all")
+        ]
+    ])
+    return keyboard
