@@ -63,3 +63,14 @@ def get_search_type_keyboard():
         ]
     ])
     return keyboard
+def get_location_choice_keyboard():
+    """
+    Клавиатура для выбора режима поиска: Рядом или Везде.
+    """
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="📍 Рядом со мной", callback_data="search_near"),
+            InlineKeyboardButton(text="🌍 Везде", callback_data="search_all")
+        ]
+    ])
+    return keyboard
