@@ -28,13 +28,13 @@ async def cmd_start(message: Message, state: FSMContext):
     if await user_exists(message.from_user.id):
         await message.answer_photo(
             photo=WELCOME_PHOTO,
-            caption="С возвращением в клуб! ✨ Хочешь найти компанию на сегодня?",
+            caption="С возвращением в клуб! ✨ Хочешь найти компанию?",
             reply_markup=main_kb
         )
     else:
         await message.answer_photo(
             photo=WELCOME_PHOTO,
-            caption="Привет, красотка! 👋 Добро пожаловать.\nДавай создадим твою анкету, чтобы подруги могли тебя найти."
+            caption="Привет, красотка! 🥀🌞 Добро пожаловать.\nДавай создадим твою анкету, чтобы подруги могли тебя найти."
         )
         await message.answer("Как тебя зовут? (можно нажать /skip)", reply_markup=kb_skip)
         await state.set_state(Form.name)
@@ -70,8 +70,8 @@ async def process_age(message: types.Message, state: FSMContext):
     age = int(message.text)
 
     # Дополнительная проверка на адекватность возраста
-    if age < 18 or age > 99:
-        await message.answer("Возраст должен быть от 18 до 99 лет. Попробуй еще раз!")
+    if age < 14 or age > 99:
+        await message.answer("Возраст должен быть от 14 до 99 лет. Попробуй еще раз!")
         return
 
     # Если всё хорошо, сохраняем и идем дальше
@@ -79,7 +79,7 @@ async def process_age(message: types.Message, state: FSMContext):
     
     # К напитку уже можно прикрепить кнопку пропуска, если он необязателен
     await message.answer(
-        "Какой твой любимый напиток? ☕️🍷", 
+        "Какое у тебя сегодня настроение?", 
         reply_markup=kb_skip 
     )
     
@@ -95,22 +95,58 @@ async def process_about(message: Message, state: FSMContext):
 
 @router.message(Form.location)
 async def process_location(message: Message, state: FSMContext):
+    # Если пришла локация
     if message.location:
-        # Сохраняем широту и долготу отдельно
+        # 1. Сразу меняем стейт, чтобы повторные нажатия не срабатывали
+        await state.set_state(Form.photo) 
+        
+        # 2. Сохраняем координаты
         await state.update_data(lat=message.location.latitude, lon=message.location.longitude)
-        await message.answer("Локация получена! 👌 Теперь пришли свое фото. 📸 Это обязательно!", reply_markup=ReplyKeyboardRemove())
-        await state.set_state(Form.photo)
+        
+        # 3. Отвечаем пользователю
+        await message.answer(
+            "Локация получена! Теперь пришли свое фото.🫧🕯️ Это обязательно!", 
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return # Выходим из функции
+
     elif message.text == "/skip":
-        await state.update_data(lat=None, lon=None)
-        await message.answer("Пропускаем локацию. Пришли свое фото. 📸 Это обязательно!", reply_markup=ReplyKeyboardRemove())
         await state.set_state(Form.photo)
-    else:
-        await message.answer("Пожалуйста, нажми на кнопку 'Отправить локацию' или напиши /skip")
+        await state.update_data(lat=None, lon=None)
+        await message.answer("Пропускаем локацию. Пришли свое фото.", reply_markup=ReplyKeyboardRemove())
+        return
+
+# ... твой предыдущий код (process_location и т.д.)
 
 @router.message(Form.photo, F.photo)
 async def process_photo(message: Message, state: FSMContext):
-    # Берем самое качественное фото из присланных
+    # 1. Берем фото и сохраняем его в состояние (как у тебя уже написано)
     photo_id = message.photo[-1].file_id
     await state.update_data(photo_id=photo_id)
+    
+    # 2. Извлекаем ВСЕ данные, которые мы собрали (имя, возраст, локация и т.д.)
+    user_data = await state.get_data()
+    user_id = message.from_user.id
+    
+    # 3. Сохраняем в Supabase (используем твою функцию из database.py)
+    # Твоя save_user принимает (user_id, data)
+    from database import save_user
+    await save_user(user_id, user_data)
+    
+    # 4. Выводим твой текст и главное меню
+    from keyboards import main_kb
+    await message.answer("Красивое фото! ♥️")
+    await message.answer(
+        "Твоя анкета сохранена. Теперь ты можешь искать подруг!", 
+        reply_markup=main_kb
+    )
+    
+    # 5. Сбрасываем состояние, чтобы пользователь мог пользоваться кнопками меню
+    await state.clear()
+
+# Дополнительный хендлер для тех, кто пытается пропустить фото или прислать текст
+@router.message(Form.photo)
+async def process_photo_invalid(message: Message):
+    await message.answer("Без фото нельзя! Это обязательно. Пожалуйста, пришли фотографию.")
     
     # --- ФИНАЛЬНЫЙ ШАГ: СОХРАНЕНИЕ В ОБЛАКО ---

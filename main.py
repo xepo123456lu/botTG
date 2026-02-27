@@ -52,7 +52,7 @@ async def main():
     # Очищаем очередь обновлений
     await bot.delete_webhook(drop_pending_updates=True)
     
-    print("Бот запущен и готов к работе! 🚀")
+    print("Бот запущен и готов к работе! ")
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
