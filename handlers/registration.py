@@ -1,4 +1,4 @@
-from keyboards import kb_geo, kb_skip, main_kb, get_search_kb
+from keyboards import kb_geo, kb_skip, main_kb, get_search_kb, show_main_menu
 from aiogram import Router, F, types
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
@@ -24,57 +24,46 @@ WELCOME_PHOTO = 'AgACAgQAAxkBAAMDaZyK0R9Xv1XaqjA_H8LLmSoAAbxWAAJrDWsbMYXhUDtX42S
 # --- КОМАНДА /START ---
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
-    # Проверяем в MongoDB, есть ли уже такая красотка в базе
-    if await user_exists(message.from_user.id):
-        await message.answer_photo(
-            photo=WELCOME_PHOTO,
-            caption="С возвращением в клуб! ✨ Хочешь найти компанию?",
-            reply_markup=main_kb
-        )
-    else:
-        await message.answer_photo(
-            photo=WELCOME_PHOTO,
-            caption="Привет, красотка! 🥀🌞 Добро пожаловать.\nДавай создадим твою анкету, чтобы подруги могли тебя найти."
-        )
-        await message.answer("Как тебя зовут? (можно нажать /skip)", reply_markup=kb_skip)
-        await state.set_state(Form.name)
+    # ВАЖНО: Всегда сбрасываем состояние
+    await state.clear()
+    
+    # Убираем клавиатуру, если она была
+    await message.answer(
+        "Начинаем заполнение анкеты заново ✨",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    
+    # Начинаем регистрацию заново
+    await message.answer_photo(
+        photo=WELCOME_PHOTO,
+        caption="Давай создадим твою анкету, чтобы подруги могли тебя найти.\n\nКак тебя зовут?"
+    )
+    await state.set_state(Form.name)
 
 # --- ПРОЦЕСС РЕГИСТРАЦИИ ---
 
 @router.message(Form.name)
 async def process_name(message: Message, state: FSMContext):
-    # Если пользователь ввел /skip или текст слишком короткий
-    if message.text == "/skip":
-        await message.answer("Имя — это важно! Пожалуйста, напиши, как тебя зовут.")
-        return # Прерываем функцию, стейт остается Form.name
-
-    name = message.text
-    await state.update_data(name=name)
-    
-    # Для возраста оставляем возможность скипа, поэтому передаем kb_skip
-    await message.answer(
-        f"Приятно познакомиться, {name}! Сколько тебе лет?", 
-        reply_markup=kb_skip
-    )
+    # Убираем проверку на /skip, просто берем текст
+    await state.update_data(name=message.text)
+    await message.answer(f"Приятно познакомиться, {message.text}! Сколько тебе лет?")
+    await state.set_state(Form.age)
     await state.set_state(Form.age)
 
 from aiogram.types import ReplyKeyboardRemove
 
 @router.message(Form.age)
-async def process_age(message: types.Message, state: FSMContext):
-    # Проверяем, является ли ввод числом
+async def process_age(message: Message, state: FSMContext):
+    # Проверяем, что ввели число
     if not message.text.isdigit():
-        await message.answer("Пожалуйста, введи возраст цифрами (например, 25).")
-        return # Останавливаем выполнение, стейт не меняется
-
-    age = int(message.text)
-
-    # Дополнительная проверка на адекватность возраста
-    if age < 14 or age > 99:
-        await message.answer("Возраст должен быть от 14 до 99 лет. Попробуй еще раз!")
+        await message.answer("Пожалуйста, введи возраст цифрами (например, 20).")
         return
 
-    # Если всё хорошо, сохраняем и идем дальше
+    age = int(message.text)
+    if age < 18 or age > 100:
+        await message.answer("Возраст должен быть реальным (от 18 лет).")
+        return
+
     await state.update_data(age=age)
     
     # К напитку уже можно прикрепить кнопку пропуска, если он необязателен
@@ -87,7 +76,11 @@ async def process_age(message: types.Message, state: FSMContext):
 
 @router.message(Form.about)
 async def process_about(message: Message, state: FSMContext):
-    about = message.text if message.text != "/skip" else "Пока ничего не рассказала"
+    about = (
+        message.text
+        if message.text != "Пропустить"
+        else "Пока ничего не рассказала"
+    )
     await state.update_data(about=about)
     # Теперь переходим к локации
     await message.answer("Где ты обычно бываешь? Поделись локацией, чтобы найти подруг рядом.", reply_markup=kb_geo)
@@ -110,7 +103,7 @@ async def process_location(message: Message, state: FSMContext):
         )
         return # Выходим из функции
 
-    elif message.text == "/skip":
+    elif message.text == "Пропустить":
         await state.set_state(Form.photo)
         await state.update_data(lat=None, lon=None)
         await message.answer("Пропускаем локацию. Пришли свое фото.", reply_markup=ReplyKeyboardRemove())
@@ -133,12 +126,11 @@ async def process_photo(message: Message, state: FSMContext):
     from database import save_user
     await save_user(user_id, user_data)
     
-    # 4. Выводим твой текст и главное меню
-    from keyboards import main_kb
+    # 4. Выводим твой текст и главное меню, убирая старые кнопки
     await message.answer("Красивое фото! ♥️")
-    await message.answer(
-        "Твоя анкета сохранена. Теперь ты можешь искать подруг!", 
-        reply_markup=main_kb
+    await show_main_menu(
+        message,
+        text="Твоя анкета сохранена. Теперь ты можешь искать подруг!",
     )
     
     # 5. Сбрасываем состояние, чтобы пользователь мог пользоваться кнопками меню

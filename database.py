@@ -8,7 +8,8 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 async def init_db():
     try:
         conn = await asyncpg.connect(DATABASE_URL, timeout=15)
-        # Создаем таблицу, если ее нет
+        
+        # 1. Создаем таблицу, если её вдруг нет
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id BIGINT PRIMARY KEY,
@@ -16,15 +17,18 @@ async def init_db():
                 age INTEGER,
                 drink TEXT,
                 about TEXT,
-                photo_id TEXT,
-                lat FLOAT,
-                lon FLOAT
+                photo_id TEXT
             )
         ''')
+        
+        # 2. ДОБАВЛЯЕМ КОЛОНКИ, если их нет (это решит твою ошибку)
+        await conn.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS lat FLOAT')
+        await conn.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS lon FLOAT')
+        
         await conn.close()
-        print("Связь с базой Supabase установлена! ✅")
+        print("Связь с базой Supabase установлена и структура обновлена! ✅")
     except Exception as e:
-        print(f"Ошибка подключения к базе: {e}")
+        print(f"Ошибка обновления базы: {e}")
 
 # --- НОВАЯ ФУНКЦИЯ (Которую искал бот) ---
 
