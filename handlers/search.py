@@ -33,7 +33,11 @@ async def start_search(message: types.Message, state: FSMContext):
         )
         return
 
-    await state.update_data(my_lat=me.get("lat"), my_lon=me.get("lon"))
+    await state.update_data(
+        my_lat=me.get("lat"),
+        my_lon=me.get("lon"),
+        seen_ids=[],
+    )
 
     await message.answer(
         "Как будем искать?", reply_markup=get_location_choice_keyboard()
@@ -45,7 +49,8 @@ async def start_search(message: types.Message, state: FSMContext):
     F.data.in_(["search_near", "search_all"]), SearchState.choosing_mode
 )
 async def process_mode_choice(callback: types.CallbackQuery, state: FSMContext):
-    await state.update_data(search_mode=callback.data)
+    # При выборе режима поиска сбрасываем ранее просмотренные анкеты
+    await state.update_data(search_mode=callback.data, seen_ids=[])
     await callback.message.delete()
     await show_next_profile(callback.message, state)
 
@@ -57,15 +62,20 @@ async def show_next_profile(message: types.Message, state: FSMContext):
     mode = data.get("search_mode")
     lat = data.get("my_lat")
     lon = data.get("my_lon")
+    seen_ids = list(data.get("seen_ids", []))
 
     friend = None
     if mode == "search_near":
-        friend = await get_users_nearby(user_id, lat, lon)
+        friend = await get_users_nearby(user_id, lat, lon, seen_ids)
     else:
-        friend = await get_all_users(user_id)
+        friend = await get_all_users(user_id, seen_ids)
 
     if friend:
         f_id, f_name, f_age, f_drink, f_photo, f_about, f_lat, f_lon = friend
+
+        # Запоминаем, что этот профиль уже показан пользователю
+        seen_ids.append(f_id)
+        await state.update_data(seen_ids=seen_ids)
 
         dist_text = (
             "Рядом с тобой!" if mode == "search_near" else "🌍 Из любой точки"

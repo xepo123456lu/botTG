@@ -8,8 +8,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 async def init_db():
     try:
         conn = await asyncpg.connect(DATABASE_URL, timeout=15)
-        
-        # 1. Создаем таблицу, если её вдруг нет
+        # Создаем таблицу, если ее нет
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id BIGINT PRIMARY KEY,
@@ -17,18 +16,15 @@ async def init_db():
                 age INTEGER,
                 drink TEXT,
                 about TEXT,
-                photo_id TEXT
+                photo_id TEXT,
+                lat FLOAT,
+                lon FLOAT
             )
         ''')
-        
-        # 2. ДОБАВЛЯЕМ КОЛОНКИ, если их нет (это решит твою ошибку)
-        await conn.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS lat FLOAT')
-        await conn.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS lon FLOAT')
-        
         await conn.close()
-        print("Связь с базой Supabase установлена и структура обновлена! ✅")
+        print("Связь с базой Supabase установлена! ✅")
     except Exception as e:
-        print(f"Ошибка обновления базы: {e}")
+        print(f"Ошибка подключения к базе: {e}")
 
 # --- НОВАЯ ФУНКЦИЯ (Которую искал бот) ---
 
@@ -54,35 +50,55 @@ async def user_exists(user_id):
 
 # --- ФУНКЦИИ ПОИСКА ---
 
-async def get_users_nearby(exclude_user_id, lat, lon):
-    """Поиск людей в радиусе (delta)"""
+async def get_users_nearby(exclude_user_id, lat, lon, seen_ids=None):
+    """Поиск людей в радиусе (delta) с учетом уже просмотренных анкет"""
     delta = 0.08  # Примерно 8-10 км
+    if seen_ids is None:
+        seen_ids = []
+
     conn = await asyncpg.connect(DATABASE_URL)
     try:
-        row = await conn.fetchrow('''
+        row = await conn.fetchrow(
+            '''
             SELECT user_id, name, age, drink, photo_id, about, lat, lon 
             FROM users 
             WHERE user_id != $1 
+              AND user_id != ALL($5::bigint[])
               AND lat BETWEEN $2 - $4 AND $2 + $4
               AND lon BETWEEN $3 - $4 AND $3 + $4
             ORDER BY RANDOM() 
             LIMIT 1
-        ''', exclude_user_id, lat, lon, delta)
+        ''',
+            exclude_user_id,
+            lat,
+            lon,
+            delta,
+            seen_ids,
+        )
         return row
     finally:
         await conn.close()
 
-async def get_all_users(exclude_user_id):
-    """Поиск 'Везде'"""
+
+async def get_all_users(exclude_user_id, seen_ids=None):
+    """Поиск 'Везде' с учетом уже просмотренных анкет"""
+    if seen_ids is None:
+        seen_ids = []
+
     conn = await asyncpg.connect(DATABASE_URL)
     try:
-        row = await conn.fetchrow('''
+        row = await conn.fetchrow(
+            '''
             SELECT user_id, name, age, drink, photo_id, about, lat, lon 
             FROM users 
             WHERE user_id != $1 
+              AND user_id != ALL($2::bigint[])
             ORDER BY RANDOM() 
             LIMIT 1
-        ''', exclude_user_id)
+        ''',
+            exclude_user_id,
+            seen_ids,
+        )
         return row
     finally:
         await conn.close()
