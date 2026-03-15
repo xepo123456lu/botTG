@@ -170,6 +170,43 @@ async def handle_like(callback: types.CallbackQuery, state: FSMContext, bot):
     await show_next_profile(callback.message, state)
 
 
+@router.callback_query(F.data.startswith("complaint_"))
+async def handle_complaint(callback: types.CallbackQuery, bot):
+    """
+    Пользователь жалуется на показанную анкету.
+    Текст жалобы уходит в личку админа @ffffrttee.
+    """
+    target_id = int(callback.data.split("_")[1])
+    from_id = callback.from_user.id
+    from_username = callback.from_user.username
+
+    admin_chat_id = "@ffffrttee"
+
+    text = (
+        "🚫 Новая жалоба на анкету\n\n"
+        f"От пользователя: {from_id}"
+        f"{f' (@{from_username})' if from_username else ''}\n"
+        f"На пользователя: {target_id}\n\n"
+        f"Открыть чат с отправителем: tg://user?id={from_id}\n"
+        f"Открыть чат с анкетой: tg://user?id={target_id}"
+    )
+
+    await bot.send_message(admin_chat_id, text)
+    await callback.answer("Жалоба отправлена модератору.", show_alert=True)
+
+
+@router.callback_query(F.data == "edit_profile")
+async def handle_edit_profile(callback: types.CallbackQuery, state: FSMContext):
+    """
+    Кнопка под анкетой "Редактировать анкету" — запускаем сценарий /start.
+    """
+    # Импортируем здесь, чтобы избежать циклического импорта роутеров
+    from handlers.registration import cmd_start
+
+    await callback.message.delete()
+    await cmd_start(callback.message, state)
+
+
 @router.callback_query(F.data == "next_search")
 async def handle_next(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.delete()

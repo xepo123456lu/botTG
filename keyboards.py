@@ -70,6 +70,8 @@ def get_search_kb(target_id: int) -> InlineKeyboardMarkup:
     Кнопки под конкретной анкетой:
     - Лайк
     - Дальше
+    - Пожаловаться
+    - Редактировать свою анкету
     """
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -80,7 +82,17 @@ def get_search_kb(target_id: int) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text="Дальше ➡️", callback_data="next_search"
                 ),
-            ]
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🚫 Пожаловаться",
+                    callback_data=f"complaint_{target_id}",
+                ),
+                InlineKeyboardButton(
+                    text="✏️ Редактировать анкету",
+                    callback_data="edit_profile",
+                ),
+            ],
         ]
     )
     return keyboard
