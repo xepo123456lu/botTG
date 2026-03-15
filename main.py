@@ -6,13 +6,14 @@ from dotenv import load_dotenv
 
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties 
 
 import database
 from handlers import registration, profile, search
 
 load_dotenv()
 
-# --- ВЕБ-СЕРВЕР ДЛЯ RENDER (БЕЗ НЕГО БОТ УПАДЕТ) ---
+# --- 1. ВЕБ-СЕРВЕР ДЛЯ ПОРТА RENDER ---
 app = Flask('')
 
 @app.route('/')
@@ -20,29 +21,41 @@ def home():
     return "I'm alive!"
 
 def run_flask():
-    # Render сам назначит порт через переменную окружения PORT
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# --- ОСНОВНОЙ КОД БОТА ---
-BOT_TOKEN = os.getenv("API_TOKEN") # В Render у тебя написано API_TOKEN
-if not BOT_TOKEN:
-    raise SystemExit("Не задан BOT_TOKEN/API_TOKEN в Environment Variables.")
+# --- 2. ОСНОВНОЙ КОД БОТА ---
+BOT_TOKEN = os.getenv("API_TOKEN")
 
 async def main():
-    # Запускаем веб-сервер в отдельном потоке
-    Thread(target=run_flask).start()
+    # Запускаем Flask
+    Thread(target=run_flask, daemon=True).start()
 
-    bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
+    if not BOT_TOKEN:
+        print("ОШИБКА: API_TOKEN не найден!")
+        return
+
+    # Правильное создание бота для aiogram 3.x
+    bot = Bot(
+        token=BOT_TOKEN, 
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    )
+    
     dp = Dispatcher()
 
+    # Роутеры
     dp.include_router(registration.router)
     dp.include_router(profile.router)
     dp.include_router(search.router)
 
+    # База данных
     await database.init_db()
-    print("Бот запущен ✅")
+    
+    print("Бот успешно запущен ✅")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print("Бот остановлен")
