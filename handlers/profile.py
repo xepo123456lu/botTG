@@ -1,53 +1,36 @@
-import os
-import asyncio
-from flask import Flask
-from threading import Thread
-from aiogram import Bot, Dispatcher
-from aiogram.enums import ParseMode
+from aiogram import Router, F, types
+from aiogram.types import Message
+from database import get_user
+from keyboards import main_kb # Убедись, что main_kb создана в keyboards.py
 
-import database
-from handlers import registration, profile, search
+router = Router()
 
-# --- 1. ВЕБ-СЕРВЕР ДЛЯ ПОРТА RENDER ---
-app = Flask('')
+@router.message(F.text == "Моя анкета 👤")
+async def show_my_profile(message: Message):
+    user_id = message.from_user.id
+    user_data = await get_user(user_id)
 
-@app.route('/')
-def home():
-    return "I'm alive!"
-
-def run_flask():
-    # Render передает порт в переменную PORT. Если ее нет, берем 8080.
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
-
-# --- 2. ОСНОВНОЙ КОД БОТА ---
-# В Render переменная называется API_TOKEN (судя по твоим скринам)
-BOT_TOKEN = os.getenv("API_TOKEN")
-
-async def main():
-    # Запускаем Flask в отдельном потоке, чтобы он не мешал боту
-    Thread(target=run_flask, daemon=True).start()
-
-    if not BOT_TOKEN:
-        print("ОШИБКА: API_TOKEN не найден в переменных окружения!")
-        return
-
-    bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
-    dp = Dispatcher()
-
-    # Регистрируем роутеры
-    dp.include_router(registration.router)
-    dp.include_router(profile.router)
-    dp.include_router(search.router)
-
-    # Инициализируем базу данных
-    await database.init_db()
-    
-    print("Бот успешно запущен и порт открыт ✅")
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        print("Бот остановлен")
+    if user_data:
+        # Формируем текст анкеты. 
+        # Если каких-то данных нет, выводим "Не указано" вместо None
+        text = (
+            f"<b>Твоя анкета:</b>\n\n"
+            f"Имя: {user_data['name']}\n"
+            f"Возраст: {user_data['age']}\n"
+            f"Любимый напиток: {user_data['drink'] or 'Не указано'}\n"
+            f"О себе: {user_data['about'] or 'Не указано'}"
+        )
+        
+        if user_data['photo_id']:
+            await message.answer_photo(
+                photo=user_data['photo_id'],
+                caption=text,
+                reply_markup=main_kb
+            )
+        else:
+            await message.answer(text, reply_markup=main_kb)
+    else:
+        await message.answer(
+            "Твоя анкета не найдена. Нажми /start, чтобы зарегистрироваться.",
+            reply_markup=main_kb
+        )
