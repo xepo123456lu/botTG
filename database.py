@@ -103,32 +103,62 @@ async def get_all_users(exclude_user_id, seen_ids=None):
     finally:
         await conn.close()
 
-# --- СОХРАНЕНИЕ ---
-
 async def save_user(user_id, data):
     """Сохраняет профиль (включая координаты)"""
     conn = await asyncpg.connect(DATABASE_URL)
     try:
-        await conn.execute('''
+        await conn.execute(
+            '''
             INSERT INTO users (user_id, name, age, drink, about, photo_id, lat, lon)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (user_id) DO UPDATE 
             SET name = EXCLUDED.name, age = EXCLUDED.age, drink = EXCLUDED.drink, 
                 about = EXCLUDED.about, photo_id = EXCLUDED.photo_id,
                 lat = EXCLUDED.lat, lon = EXCLUDED.lon
-        ''', user_id, data.get('name'), data.get('age'), data.get('drink'), 
-             data.get('about'), data.get('photo_id'), data.get('lat'), data.get('lon'))
+        ''',
+            user_id,
+            data.get('name'),
+            data.get('age'),
+            data.get('drink'),
+            data.get('about'),
+            data.get('photo_id'),
+            data.get('lat'),
+            data.get('lon'),
+        )
     finally:
         await conn.close()
+
 
 async def add_like(liker_id, liked_id):
     """Записывает лайк и проверяет на взаимность"""
     conn = await asyncpg.connect(DATABASE_URL)
     try:
-        await conn.execute('CREATE TABLE IF NOT EXISTS likes (liker_id BIGINT, liked_id BIGINT)')
-        await conn.execute('INSERT INTO likes (liker_id, liked_id) VALUES ($1, $2)', liker_id, liked_id)
-        
-        match = await conn.fetchval('SELECT 1 FROM likes WHERE liker_id = $1 AND liked_id = $2', liked_id, liker_id)
+        await conn.execute(
+            'CREATE TABLE IF NOT EXISTS likes (liker_id BIGINT, liked_id BIGINT)'
+        )
+        await conn.execute(
+            'INSERT INTO likes (liker_id, liked_id) VALUES ($1, $2)',
+            liker_id,
+            liked_id,
+        )
+
+        match = await conn.fetchval(
+            'SELECT 1 FROM likes WHERE liker_id = $1 AND liked_id = $2',
+            liked_id,
+            liker_id,
+        )
         return match is not None
+    finally:
+        await conn.close()
+
+
+async def delete_user(user_id):
+    """Полностью удаляет анкету пользователя и связанные лайки"""
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        await conn.execute(
+            'DELETE FROM likes WHERE liker_id = $1 OR liked_id = $1', user_id
+        )
+        await conn.execute('DELETE FROM users WHERE user_id = $1', user_id)
     finally:
         await conn.close()

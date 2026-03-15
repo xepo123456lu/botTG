@@ -14,6 +14,7 @@ main_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="Найти подругу 🔍")],
         [KeyboardButton(text="Моя анкета 👤")],
+        [KeyboardButton(text="Удалить анкету 🗑")],
     ],
     resize_keyboard=True,
     input_field_placeholder="Выбери действие...",
