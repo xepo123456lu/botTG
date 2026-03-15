@@ -1,34 +1,53 @@
-from aiogram import Router, F, types
-from database import get_user
-from keyboards import show_profile
+import os
+import asyncio
+from flask import Flask
+from threading import Thread
+from aiogram import Bot, Dispatcher
+from aiogram.enums import ParseMode
 
-router = Router()
+import database
+from handlers import registration, profile, search
 
-@router.message(F.text == "Моя анкета 👤")
-async def my_profile(message: types.Message):
-    user_id = message.from_user.id
+# --- 1. ВЕБ-СЕРВЕР ДЛЯ ПОРТА RENDER ---
+app = Flask('')
 
-    user = await get_user(user_id)
+@app.route('/')
+def home():
+    return "I'm alive!"
 
-    if not user:
-        await message.answer(
-            "Странно, но я не нашёл твою анкету. Давай заполним её? Нажми /start"
-        )
+def run_flask():
+    # Render передает порт в переменную PORT. Если ее нет, берем 8080.
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+# --- 2. ОСНОВНОЙ КОД БОТА ---
+# В Render переменная называется API_TOKEN (судя по твоим скринам)
+BOT_TOKEN = os.getenv("API_TOKEN")
+
+async def main():
+    # Запускаем Flask в отдельном потоке, чтобы он не мешал боту
+    Thread(target=run_flask, daemon=True).start()
+
+    if not BOT_TOKEN:
+        print("ОШИБКА: API_TOKEN не найден в переменных окружения!")
         return
 
-    # asyncpg возвращает Record, обращаемся как к dict-подобному объекту
-    name = user.get("name", "Не указано")
-    age = user.get("age", "Не указан")
-    drink = user.get("drink", "Кофе")
-    about = user.get("about", "Не заполнено")
-    photo_id = user.get("photo_id")
+    bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
+    dp = Dispatcher()
 
-    caption = (
-        "<b>Твоя анкета так выглядит для других:</b>\n\n"
-        f" <b>Имя:</b> {name}, {age}\n"
-        f" <b>Настроение:</b> {drink}\n"
-        f" <b>О себе:</b> {about}\n\n"
-        "<i>Хочешь что-то изменить? Просто нажми /start и пройди регистрацию заново.</i>"
-    )
+    # Регистрируем роутеры
+    dp.include_router(registration.router)
+    dp.include_router(profile.router)
+    dp.include_router(search.router)
 
-    await show_profile(message, caption=caption, photo_id=photo_id)
+    # Инициализируем базу данных
+    await database.init_db()
+    
+    print("Бот успешно запущен и порт открыт ✅")
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print("Бот остановлен")
