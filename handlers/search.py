@@ -110,17 +110,59 @@ async def handle_like(callback: types.CallbackQuery, state: FSMContext, bot):
     await callback.message.edit_reply_markup(reply_markup=None)
     is_match = await add_like(from_id, to_id)
 
-    if is_match:
-        await callback.message.answer(
-            f"🎉 Это взаимно! Напиши ей: "
-            f"<a href='tg://user?id={to_id}'>СЮДА</a>",
+    # Достаём анкету лайкнувшего (юзера A), чтобы показать её юзеру B
+    me = await get_user(from_id)
+
+    # Кнопка для открытия чата с инициатором лайка
+    kb_open_chat_with_a = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                types.InlineKeyboardButton(
+                    text="Открыть чат",
+                    url=f"tg://user?id={from_id}",
+                )
+            ]
+        ]
+    )
+
+    if me and me.get("photo_id"):
+        # Формируем карточку юзера A, чтобы отправить её юзеру B
+        caption_for_b = (
+            f"👀 Тебе поставили лайк!\n\n"
+            f"👤 <b>Имя:</b> {me.get('name')}, {me.get('age')}\n"
+            f"🥂 <b>Куда сходит:</b> {me.get('drink')}\n"
+            f"📝 <b>О себе:</b> {me.get('about') or 'Пока пусто'}"
+        )
+        await bot.send_photo(
+            chat_id=to_id,
+            photo=me.get("photo_id"),
+            caption=caption_for_b,
+            reply_markup=kb_open_chat_with_a,
             parse_mode="HTML",
         )
+    else:
+        # Если по какой-то причине нет анкеты/фото, шлём просто текст
         await bot.send_message(
             to_id,
-            "🌟 У тебя новый мэтч! Тебе поставили лайк: "
-            f"<a href='tg://user?id={from_id}'>ОТКРЫТЬ ЧАТ</a>",
-            parse_mode="HTML",
+            "👀 Тебе поставили лайк! Открой чат, чтобы познакомиться.",
+            reply_markup=kb_open_chat_with_a,
+        )
+
+    if is_match:
+        # Сообщение отправителю (юзеру A) при взаимном лайке
+        kb_to_friend = types.InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    types.InlineKeyboardButton(
+                        text="Написать ей",
+                        url=f"tg://user?id={to_id}",
+                    )
+                ]
+            ]
+        )
+        await callback.message.answer(
+            "🎉 Это взаимно! Напиши ей:",
+            reply_markup=kb_to_friend,
         )
     else:
         await callback.answer("Лайк отправлен! 😉")
