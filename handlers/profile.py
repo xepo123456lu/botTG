@@ -7,7 +7,7 @@ from keyboards import main_kb  # Убедись, что main_kb создана �
 router = Router()
 
 
-@router.message(F.text == "Моя анкета 👤")
+@router.message(F.text == "Моя анкета 🌘")
 async def show_my_profile(message: Message):
     user_id = message.from_user.id
     user_data = await get_user(user_id)
@@ -18,7 +18,7 @@ async def show_my_profile(message: Message):
         text = (
             f"<b>Твоя анкета:</b>\n\n"
             f"Имя: {user_data['name']}\n"
-            f"Возраст: {user_data['age']}\n"
+            f"Возраст и локация: {user_data['age']}\n"
             f"О себе: {user_data['about'] or 'Не указано'}"
         )
 
@@ -37,7 +37,7 @@ async def show_my_profile(message: Message):
         )
 
 
-@router.message(F.text == "Редактировать анкету ✏️")
+@router.message(F.text == "Редактировать анкету 🌑")
 async def edit_my_profile(message: Message, state: FSMContext):
     """
     Перенесённая в главное меню функция редактирования анкеты.
@@ -48,7 +48,7 @@ async def edit_my_profile(message: Message, state: FSMContext):
     await cmd_start(message, state)
 
 
-@router.message(F.text == "Удалить анкету 🗑")
+@router.message(F.text == "Удалить анкету 🌒")
 async def delete_my_profile(message: Message):
     user_id = message.from_user.id
     await delete_user(user_id)
@@ -58,7 +58,7 @@ async def delete_my_profile(message: Message):
     )
 
 
-@router.message(F.text == "Пожаловаться 🚫")
+@router.message(F.text == "Пожаловаться 🌓")
 async def complaint_menu(message: Message) -> None:
     """
     Кнопка жалобы в главном нижнем меню.

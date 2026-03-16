@@ -13,10 +13,10 @@ class SearchState(StatesGroup):
     viewing_profiles = State()
 
 
-@router.message(F.text == "Найти подругу 🔍")
+@router.message(F.text == "Найти подругу 🌖")
 async def start_search(message: types.Message, state: FSMContext):
     """
-    Обработка кнопки меню "Найти подругу 🔍":
+    Обработка кнопки меню "Найти подругу 🌖":
     - убираем старую клавиатуру
     - проверяем, есть ли координаты
     - спрашиваем режим поиска
@@ -82,8 +82,8 @@ async def show_next_profile(message: types.Message, state: FSMContext):
         )
         caption = (
             f"✨ {dist_text}\n\n"
-            f"👤 <b>Имя:</b> {f_name}, {f_age}\n"
-            f"📝 <b>О себе:</b> {f_about or 'Пока пусто'}"
+            f" <b>Имя:</b> {f_name}, {f_age}\n"
+            f"<b>О себе:</b> {f_about or 'Пока пусто'}"
         )
 
         await message.answer_photo(
@@ -95,7 +95,7 @@ async def show_next_profile(message: types.Message, state: FSMContext):
         await state.set_state(SearchState.viewing_profiles)
     else:
         await message.answer(
-            "К сожалению, анкет больше нет... 😔\n"
+            "К сожалению, анкет больше нет... 🥀\n"
             "Попробуй сменить режим поиска позже!"
         )
         await state.clear()
@@ -127,9 +127,9 @@ async def handle_like(callback: types.CallbackQuery, state: FSMContext, bot):
     if me and me.get("photo_id"):
         # Формируем карточку юзера A, чтобы отправить её юзеру B
         caption_for_b = (
-            f"👀 Тебе поставили лайк!\n\n"
-            f"👤 <b>Имя:</b> {me.get('name')}, {me.get('age')}\n"
-            f"📝 <b>О себе:</b> {me.get('about') or 'Пока пусто'}"
+            f" Тебе поставили ♥️!\n\n"
+            f" <b>Имя:</b> {me.get('name')}, {me.get('age')}\n"
+            f"<b>О себе:</b> {me.get('about') or 'Пока пусто'}"
         )
         await bot.send_photo(
             chat_id=to_id,
@@ -159,11 +159,11 @@ async def handle_like(callback: types.CallbackQuery, state: FSMContext, bot):
             ]
         )
         await callback.message.answer(
-            "🎉 Это взаимно! Напиши ей:",
+            "Это взаимно! Напиши ей:",
             reply_markup=kb_to_friend,
         )
     else:
-        await callback.answer("Лайк отправлен! 😉")
+        await callback.answer("Лайк отправлен! 🦦")
 
     await show_next_profile(callback.message, state)
 
@@ -181,7 +181,7 @@ async def handle_complaint(callback: types.CallbackQuery, bot):
     admin_chat_id = "@ffffrttee"
 
     text = (
-        "🚫 Новая жалоба на анкету\n\n"
+        "🌖 Новая жалоба на анкету\n\n"
         f"От пользователя: {from_id}"
         f"{f' (@{from_username})' if from_username else ''}\n"
         f"На пользователя: {target_id}\n\n"

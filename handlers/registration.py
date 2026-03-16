@@ -36,8 +36,6 @@ async def cmd_start(message: Message, state: FSMContext):
         "Этот бот только для женщин. Мы постаральсь сделать его безопасным и простым",
         reply_markup=ReplyKeyboardRemove()
     )
-
-    await message.answer("Давай создадим твою анкету. Это займет 1 минуту.")
     
     # Начинаем регистрацию заново
     await message.answer_photo(
@@ -52,7 +50,7 @@ async def cmd_start(message: Message, state: FSMContext):
 async def process_name(message: Message, state: FSMContext):
     # Убираем проверку на /skip, просто берем текст
     await state.update_data(name=message.text)
-    await message.answer(f"Приятно познакомиться, {message.text}! Сколько тебе лет?")
+    await message.answer(f"Приятно познакомиться, {message.text}! Сколько тебе лет и где ты живешь?")
     await state.set_state(Form.age)
     await state.set_state(Form.age)
 

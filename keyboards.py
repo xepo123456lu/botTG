@@ -12,11 +12,11 @@ from aiogram.types import (
 # ГЛАВНОЕ МЕНЮ (Reply Keyboard, заменяет стандартную клавиатуру)
 main_kb = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="Найти подругу 🔍")],
-        [KeyboardButton(text="Моя анкета 👤")],
-        [KeyboardButton(text="Редактировать анкету ✏️")],
-        [KeyboardButton(text="Удалить анкету 🗑")],
-        [KeyboardButton(text="Пожаловаться 🚫")],
+        [KeyboardButton(text="Найти подругу 🌖")],
+        [KeyboardButton(text="Моя анкета 🌘")],
+        [KeyboardButton(text="Редактировать анкету 🌑")],
+        [KeyboardButton(text="Удалить анкету 🌒")],
+        [KeyboardButton(text="Пожаловаться 🌓")],
     ],
     resize_keyboard=True,
     input_field_placeholder="Выбери действие...",
@@ -25,8 +25,8 @@ main_kb = ReplyKeyboardMarkup(
 # Клавиатура поиска (Лайк / Пропустить / В главное меню)
 search_kb = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="Лайк 💖"), KeyboardButton(text="Пропустить ➡️")],
-        [KeyboardButton(text="В главное меню ⬅️")],
+        [KeyboardButton(text="Лайк ♥️"), KeyboardButton(text="Пропустить 🥀")],
+        [KeyboardButton(text="В главное меню 🧺")],
     ],
     resize_keyboard=True,
 )
@@ -34,7 +34,7 @@ search_kb = ReplyKeyboardMarkup(
 # Клавиатура геолокации
 kb_geo = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="Поделиться локацией 📍", request_location=True)],
+        [KeyboardButton(text="Поделиться локацией 🚏", request_location=True)],
         [KeyboardButton(text="Пропустить")],
     ],
     resize_keyboard=True,
@@ -50,7 +50,7 @@ kb_skip = ReplyKeyboardMarkup(
 
 # Клавиатура с кнопкой "Отмена"
 kb_cancel = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text="Отмена ❌")]],
+    keyboard=[[KeyboardButton(text="Отмена 🥀")]],
     resize_keyboard=True,
     one_time_keyboard=True,
 )
@@ -68,10 +68,10 @@ def get_search_kb(target_id: int) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="💖 Лайк", callback_data=f"like_{target_id}"
+                    text="♥️", callback_data=f"like_{target_id}"
                 ),
                 InlineKeyboardButton(
-                    text="Дальше ➡️", callback_data="next_search"
+                    text="Дальше 🥀", callback_data="next_search"
                 ),
             ],
         ]
@@ -87,10 +87,10 @@ def get_location_choice_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="📍 Рядом со мной", callback_data="search_near"
+                    text="🚏 Рядом со мной", callback_data="search_near"
                 ),
                 InlineKeyboardButton(
-                    text="🌍 Везде", callback_data="search_all"
+                    text="Везде", callback_data="search_all"
                 ),
             ]
         ]
