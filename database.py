@@ -34,7 +34,7 @@ async def get_user(user_id):
     try:
         # fetchrow возвращает одну строку (запись) или None
         row = await conn.fetchrow('SELECT * FROM users WHERE user_id = $1', user_id)
-        return row
+        return dict(row) if row else None
     finally:
         await conn.close()
 

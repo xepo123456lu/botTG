@@ -164,6 +164,10 @@ async def show_next_profile(message: types.Message, state: FSMContext):
         await state.set_state(SearchState.viewing_profiles)
     else:
         await message.answer(
+            "Пока рядом нет анкет.\n"
+            "Измени критерии поиска или зайди позже."
+            if mode == "search_near"
+            else
             "К сожалению, анкет больше нет... 🥀\n"
             "Попробуй сменить режим поиска позже!"
         )
@@ -234,7 +238,7 @@ async def handle_like(callback: types.CallbackQuery, state: FSMContext, bot):
         )
     else:
         await callback.answer(
-            "Твой лайк отправлен. Когда тебя лайкнут в ответ, у вас появится общий чат."
+            "Твой лайк отправлен. 🦦"
         )
 
     # Небольшая пауза перед показом следующей анкеты
