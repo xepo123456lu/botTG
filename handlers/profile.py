@@ -1,4 +1,5 @@
 from aiogram import Router, F, types
+from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from database import get_user, delete_user
@@ -7,6 +8,7 @@ from keyboards import main_kb  # Убедись, что main_kb создана �
 router = Router()
 
 
+@router.message(Command("profile"))
 @router.message(F.text == "Моя анкета 🌘")
 async def show_my_profile(message: Message):
     user_id = message.from_user.id
@@ -18,7 +20,8 @@ async def show_my_profile(message: Message):
         text = (
             f"<b>Твоя анкета:</b>\n\n"
             f"Имя: {user_data['name']}\n"
-            f"Возраст и локация: {user_data['age']}\n"
+            f"Возраст: {user_data['age']}\n"
+            f"Где ты живешь: {user_data['drink'] or 'Не указано'}\n"
             f"О себе: {user_data['about'] or 'Не указано'}"
         )
 
@@ -26,17 +29,16 @@ async def show_my_profile(message: Message):
             await message.answer_photo(
                 photo=user_data['photo_id'],
                 caption=text,
-                reply_markup=main_kb,
             )
         else:
-            await message.answer(text, reply_markup=main_kb)
+            await message.answer(text)
     else:
         await message.answer(
             "Твоя анкета не найдена. Нажми /start, чтобы зарегистрироваться.",
-            reply_markup=main_kb,
         )
 
 
+@router.message(Command("edit"))
 @router.message(F.text == "Редактировать анкету 🌑")
 async def edit_my_profile(message: Message, state: FSMContext):
     """
@@ -48,16 +50,17 @@ async def edit_my_profile(message: Message, state: FSMContext):
     await cmd_start(message, state)
 
 
+@router.message(Command("delete"))
 @router.message(F.text == "Удалить анкету 🌒")
 async def delete_my_profile(message: Message):
     user_id = message.from_user.id
     await delete_user(user_id)
     await message.answer(
         "Твоя анкета удалена. Если захочешь, можешь создать новую командой /start.",
-        reply_markup=main_kb,
     )
 
 
+@router.message(Command("complaint"))
 @router.message(F.text == "Пожаловаться 🌓")
 async def complaint_menu(message: Message) -> None:
     """

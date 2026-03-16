@@ -9,18 +9,10 @@ from aiogram.types import (
 
 # ---------- ОСНОВНЫЕ КЛАВИАТУРЫ ----------
 
-# ГЛАВНОЕ МЕНЮ (Reply Keyboard, заменяет стандартную клавиатуру)
-main_kb = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="Найти подругу 🌖")],
-        [KeyboardButton(text="Моя анкета 🌘")],
-        [KeyboardButton(text="Редактировать анкету 🌑")],
-        [KeyboardButton(text="Удалить анкету 🌒")],
-        [KeyboardButton(text="Пожаловаться 🌓")],
-    ],
-    resize_keyboard=True,
-    input_field_placeholder="Выбери действие...",
-)
+# ГЛАВНОЕ МЕНЮ
+# Раньше здесь была Reply-клавиатура. Теперь навигация вынесена в системное меню Telegram (Bot Commands),
+# поэтому кастомную Reply-клавиатуру не показываем.
+main_kb = ReplyKeyboardRemove()
 
 # Клавиатура поиска (Лайк / Пропустить / В главное меню)
 search_kb = ReplyKeyboardMarkup(
@@ -115,8 +107,7 @@ async def show_main_menu(message: Message, text: str | None = None) -> None:
     """
     Показывает главное меню и предварительно убирает старую клавиатуру.
     """
-    await remove_keyboard(message, text or "Главное меню. Выбери действие:")
-    await message.answer("Выбери действие:", reply_markup=main_kb)
+    await remove_keyboard(message, text or "Главное меню.")
 
 
 async def show_profile(

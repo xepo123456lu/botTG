@@ -1,4 +1,5 @@
 from aiogram import Router, F, types
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
@@ -13,6 +14,7 @@ class SearchState(StatesGroup):
     viewing_profiles = State()
 
 
+@router.message(Command("search"))
 @router.message(F.text == "Найти подругу 🌖")
 async def start_search(message: types.Message, state: FSMContext):
     """
@@ -71,7 +73,7 @@ async def show_next_profile(message: types.Message, state: FSMContext):
         friend = await get_all_users(user_id, seen_ids)
 
     if friend:
-        f_id, f_name, f_age, f_photo, f_about, f_lat, f_lon = friend
+        f_id, f_name, f_age, f_city, f_photo, f_about, f_lat, f_lon = friend
 
         # Запоминаем, что этот профиль уже показан пользователю
         seen_ids.append(f_id)
@@ -83,6 +85,7 @@ async def show_next_profile(message: types.Message, state: FSMContext):
         caption = (
             f"✨ {dist_text}\n\n"
             f" <b>Имя:</b> {f_name}, {f_age}\n"
+            f"Город: {f_city or 'Не указано'}\n"
             f"<b>О себе:</b> {f_about or 'Пока пусто'}"
         )
 
@@ -129,6 +132,7 @@ async def handle_like(callback: types.CallbackQuery, state: FSMContext, bot):
         caption_for_b = (
             f" Тебе поставили ♥️!\n\n"
             f" <b>Имя:</b> {me.get('name')}, {me.get('age')}\n"
+            f"Город: {me.get('drink') or 'Не указано'}\n"
             f"<b>О себе:</b> {me.get('about') or 'Пока пусто'}"
         )
         await bot.send_photo(

@@ -15,6 +15,7 @@ class Form(StatesGroup):
     name = State()
     age = State()
     about = State()
+    city = State()
     location = State()
     photo = State()
     saving = State()
@@ -44,13 +45,14 @@ async def cmd_start(message: Message, state: FSMContext):
     )
     await state.set_state(Form.name)
 
+
 # --- ПРОЦЕСС РЕГИСТРАЦИИ ---
 
 @router.message(Form.name)
 async def process_name(message: Message, state: FSMContext):
     # Убираем проверку на /skip, просто берем текст
     await state.update_data(name=message.text)
-    await message.answer(f"Приятно познакомиться, {message.text}! Сколько тебе лет и где ты живешь?")
+    await message.answer(f"Приятно познакомиться, {message.text}! Сколько тебе лет?")
     await state.set_state(Form.age)
     await state.set_state(Form.age)
 
@@ -86,8 +88,27 @@ async def process_about(message: Message, state: FSMContext):
         else "Пока ничего не рассказала"
     )
     await state.update_data(about=about)
+
+    # Вопрос про город (можно пропустить)
+    await message.answer(
+        "Где ты живешь? (Можно пропустить)",
+        reply_markup=kb_skip,
+    )
+    await state.set_state(Form.city)
+
+
+@router.message(Form.city)
+async def process_city(message: Message, state: FSMContext):
+    city = None if message.text == "Пропустить" else message.text
+
+    # Сохраняем город в поле drink (колонка БД уже есть)
+    await state.update_data(drink=city)
+
     # Теперь переходим к локации
-    await message.answer("Где ты обычно бываешь? Поделись локацией, чтобы найти подруг рядом.", reply_markup=kb_geo)
+    await message.answer(
+        "Где ты обычно бываешь? Поделись локацией, чтобы найти подруг рядом.",
+        reply_markup=kb_geo,
+    )
     await state.set_state(Form.location)
 
 @router.message(Form.location)
