@@ -69,8 +69,10 @@ async def get_users_nearby(exclude_user_id, lat, lon, seen_ids=None):
             FROM users 
             WHERE user_id != $1 
               AND user_id != ALL($5::bigint[])
-              AND lat BETWEEN $2 - $4 AND $2 + $4
-              AND lon BETWEEN $3 - $4 AND $3 + $4
+              AND lat BETWEEN ($2::double precision - $4::double precision)
+                          AND ($2::double precision + $4::double precision)
+              AND lon BETWEEN ($3::double precision - $4::double precision)
+                          AND ($3::double precision + $4::double precision)
             ORDER BY RANDOM() 
             LIMIT 1
         ''',
