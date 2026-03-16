@@ -71,7 +71,7 @@ async def show_next_profile(message: types.Message, state: FSMContext):
         friend = await get_all_users(user_id, seen_ids)
 
     if friend:
-        f_id, f_name, f_age, f_drink, f_photo, f_about, f_lat, f_lon = friend
+        f_id, f_name, f_age, f_photo, f_about, f_lat, f_lon = friend
 
         # Запоминаем, что этот профиль уже показан пользователю
         seen_ids.append(f_id)
@@ -83,7 +83,6 @@ async def show_next_profile(message: types.Message, state: FSMContext):
         caption = (
             f"✨ {dist_text}\n\n"
             f"👤 <b>Имя:</b> {f_name}, {f_age}\n"
-            f"🥂 <b>Куда сходим:</b> {f_drink}\n"
             f"📝 <b>О себе:</b> {f_about or 'Пока пусто'}"
         )
 
@@ -130,7 +129,6 @@ async def handle_like(callback: types.CallbackQuery, state: FSMContext, bot):
         caption_for_b = (
             f"👀 Тебе поставили лайк!\n\n"
             f"👤 <b>Имя:</b> {me.get('name')}, {me.get('age')}\n"
-            f"🥂 <b>Куда сходит:</b> {me.get('drink')}\n"
             f"📝 <b>О себе:</b> {me.get('about') or 'Пока пусто'}"
         )
         await bot.send_photo(

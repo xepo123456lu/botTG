@@ -19,7 +19,6 @@ async def show_my_profile(message: Message):
             f"<b>Твоя анкета:</b>\n\n"
             f"Имя: {user_data['name']}\n"
             f"Возраст: {user_data['age']}\n"
-            f"Любимый напиток: {user_data['drink'] or 'Не указано'}\n"
             f"О себе: {user_data['about'] or 'Не указано'}"
         )
 

@@ -60,7 +60,7 @@ async def get_users_nearby(exclude_user_id, lat, lon, seen_ids=None):
     try:
         row = await conn.fetchrow(
             '''
-            SELECT user_id, name, age, drink, photo_id, about, lat, lon 
+            SELECT user_id, name, age, photo_id, about, lat, lon 
             FROM users 
             WHERE user_id != $1 
               AND user_id != ALL($5::bigint[])
@@ -89,7 +89,7 @@ async def get_all_users(exclude_user_id, seen_ids=None):
     try:
         row = await conn.fetchrow(
             '''
-            SELECT user_id, name, age, drink, photo_id, about, lat, lon 
+            SELECT user_id, name, age, photo_id, about, lat, lon 
             FROM users 
             WHERE user_id != $1 
               AND user_id != ALL($2::bigint[])

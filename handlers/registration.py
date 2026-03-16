@@ -17,6 +17,7 @@ class Form(StatesGroup):
     about = State()
     location = State()
     photo = State()
+    saving = State()
 
 # Твой ID фото для приветствия
 WELCOME_PHOTO = 'AgACAgQAAxkBAAMDaZyK0R9Xv1XaqjA_H8LLmSoAAbxWAAJrDWsbMYXhUDtX42SBVCcvAQADAgADeAADOgQ' 
@@ -29,9 +30,14 @@ async def cmd_start(message: Message, state: FSMContext):
     
     # Убираем клавиатуру, если она была
     await message.answer(
-        "Начинаем заполнение анкеты заново ✨",
+        "Привет, дорогая! Рады видеть тебя ^-^\n\n"
+        "Найти близкого по духу человека — это бесценно. Здесь ты можешь найти подругу "
+        "за тысячи километров или в паре остановок. Мы за общение, поддержку и новых друзей.\n\n"
+        "Этот бот только для женщин. Мы постаральсь сделать его безопасным и простым",
         reply_markup=ReplyKeyboardRemove()
     )
+
+    await message.answer("Давай создадим твою анкету. Это займет 1 минуту.")
     
     # Начинаем регистрацию заново
     await message.answer_photo(
@@ -68,7 +74,7 @@ async def process_age(message: Message, state: FSMContext):
     
     # К напитку уже можно прикрепить кнопку пропуска, если он необязателен
     await message.answer(
-        "Какое у тебя сегодня настроение?", 
+        "Раскажи о себе и с кем бы ты хотела познакомиться?", 
         reply_markup=kb_skip 
     )
     
@@ -113,7 +119,17 @@ async def process_location(message: Message, state: FSMContext):
 
 @router.message(Form.photo, F.photo)
 async def process_photo(message: Message, state: FSMContext):
-    # 1. Берем фото и сохраняем его в состояние (как у тебя уже написано)
+    # Ограничение: в анкете только одно фото.
+    # Если пользователь отправил "альбом" или пытается прислать второе фото — игнорируем.
+    data = await state.get_data()
+    if data.get("photo_id"):
+        await message.answer("Фото уже получено. В анкете может быть только одно фото.")
+        return
+
+    # Блокируем стейт на время сохранения, чтобы при альбоме не было гонки.
+    await state.set_state(Form.saving)
+
+    # 1. Берем фото и сохраняем его в состояние
     photo_id = message.photo[-1].file_id
     await state.update_data(photo_id=photo_id)
     
@@ -135,6 +151,11 @@ async def process_photo(message: Message, state: FSMContext):
     
     # 5. Сбрасываем состояние, чтобы пользователь мог пользоваться кнопками меню
     await state.clear()
+
+# Если пользователь продолжает слать фото/текст пока сохраняем анкету
+@router.message(Form.saving)
+async def process_saving(message: Message) -> None:
+    await message.answer("Сохраняю анкету… Подожди пару секунд.")
 
 # Дополнительный хендлер для тех, кто пытается пропустить фото или прислать текст
 @router.message(Form.photo)
