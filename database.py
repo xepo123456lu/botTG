@@ -52,6 +52,11 @@ async def user_exists(user_id):
 
 async def get_users_nearby(exclude_user_id, lat, lon, seen_ids=None):
     """Поиск людей в радиусе (delta) с учетом уже просмотренных анкет"""
+    # Защита: если локации нет, поиск "рядом" невозможен.
+    # Иначе Postgres может упасть на выражениях вида $2 - $4 с "unknown".
+    if lat is None or lon is None:
+        return None
+
     delta = 0.08  # Примерно 8-10 км
     if seen_ids is None:
         seen_ids = []

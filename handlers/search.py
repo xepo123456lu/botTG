@@ -86,7 +86,15 @@ async def process_mode_choice(callback: types.CallbackQuery, state: FSMContext):
         await callback.message.edit_reply_markup(reply_markup=None)
     except Exception:
         pass
-    await show_next_profile(callback.message, state)
+    try:
+        await show_next_profile(callback.message, state)
+    except Exception as e:
+        # Чтобы не было "тишины" при падении, показываем сообщение пользователю,
+        # а ошибку выводим в логи хостинга.
+        print(f"process_mode_choice error: {e!r}")
+        await callback.message.answer(
+            "Что-то пошло не так при поиске. Попробуй ещё раз командой /search."
+        )
 
 
 @router.message(SearchState.waiting_location)
@@ -137,6 +145,16 @@ async def show_next_profile(message: types.Message, state: FSMContext):
     lat = data.get("my_lat")
     lon = data.get("my_lon")
     seen_ids = list(data.get("seen_ids", []))
+
+    if mode == "search_near" and (lat is None or lon is None):
+        await message.answer(
+            "Для поиска рядом нужна локация. Выбери «Рядом» ещё раз и пришли локацию."
+        )
+        await state.set_state(SearchState.choosing_mode)
+        await message.answer(
+            "Как будем искать?", reply_markup=get_location_choice_keyboard()
+        )
+        return
 
     friend = None
     if mode == "search_near":
