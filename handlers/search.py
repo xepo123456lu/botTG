@@ -77,9 +77,15 @@ async def process_mode_choice(callback: types.CallbackQuery, state: FSMContext):
         await state.set_state(SearchState.waiting_location)
         return
 
+    await callback.answer()
+
     # При выборе режима поиска сбрасываем ранее просмотренные анкеты
     await state.update_data(search_mode=callback.data, seen_ids=[])
-    await callback.message.delete()
+    # Не удаляем сообщение жестко (иногда Telegram не даёт удалить) — просто убираем инлайн-кнопки.
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
     await show_next_profile(callback.message, state)
 
 
