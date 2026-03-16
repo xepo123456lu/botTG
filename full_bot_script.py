@@ -19,11 +19,11 @@ from aiogram.fsm.storage.memory import MemoryStorage
 def main_menu_kb() -> types.ReplyKeyboardMarkup:
     return types.ReplyKeyboardMarkup(
         keyboard=[
-            [types.KeyboardButton(text="Найти подругу 🔍")],
-            [types.KeyboardButton(text="Моя анкета 👤")],
-            [types.KeyboardButton(text="Редактировать анкету ✏️")],
-            [types.KeyboardButton(text="Удалить анкету 🗑")],
-            [types.KeyboardButton(text="Пожаловаться 🚫")],
+            [types.KeyboardButton(text="Найти подругу 🌖")],
+            [types.KeyboardButton(text="Моя анкета 🌘")],
+            [types.KeyboardButton(text="Редактировать анкету 🌑")],
+            [types.KeyboardButton(text="Удалить анкету 🌒")],
+            [types.KeyboardButton(text="Пожаловаться 🌓")],
         ],
         resize_keyboard=True,
         input_field_placeholder="Выбери действие...",
@@ -35,9 +35,9 @@ def profile_inline_kb(target_id: int) -> types.InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 types.InlineKeyboardButton(
-                    text="💖 Лайк", callback_data=f"like_{target_id}"
+                    text="Лайк ♥️", callback_data=f"like_{target_id}"
                 ),
-                types.InlineKeyboardButton(text="Дальше ➡️", callback_data="next"),
+                types.InlineKeyboardButton(text="Дальше 🥀", callback_data="next"),
             ]
         ]
     )
@@ -57,14 +57,14 @@ async def cmd_start(message: types.Message, state: FSMContext) -> None:
     )
 
 
-@router.message(F.text == "Найти подругу 🔍")
+@router.message(F.text == "Найти подругу 🌖")
 async def start_search(message: types.Message) -> None:
     # Заглушка анкеты, как у вас на скринах (сообщение с фото + inline кнопки)
     caption = (
-        "✨ 🌍 Из любой точки\n\n"
-        "👤 <b>Имя:</b> Юля, 29\n"
-        "🥂 <b>Куда сходим:</b> None\n"
-        "📝 <b>О себе:</b> грустное"
+        " Из любой точки\n\n"
+        " <b>Имя:</b> Юля, 29\n"
+        " <b>Куда сходим:</b> None\n"
+        " <b>О себе:</b> грустное"
     )
     await message.answer_photo(
         photo="https://placekitten.com/800/800",
@@ -95,25 +95,25 @@ async def on_next(callback: types.CallbackQuery) -> None:
     await callback.message.answer("Следующая анкета… (заглушка)", reply_markup=main_menu_kb())
 
 
-@router.message(F.text == "Моя анкета 👤")
+@router.message(F.text == "Моя анкета 🌘")
 async def my_profile(message: types.Message) -> None:
     await message.answer("Твоя анкета. (заглушка)", reply_markup=main_menu_kb())
 
 
-@router.message(F.text == "Редактировать анкету ✏️")
+@router.message(F.text == "Редактировать анкету 🌑")
 async def edit_profile(message: types.Message, state: FSMContext) -> None:
     # Заглушка — тут запускайте ваш сценарий редактирования/регистрации
     await state.clear()
     await message.answer("Редактирование анкеты… (заглушка)", reply_markup=main_menu_kb())
 
 
-@router.message(F.text == "Удалить анкету 🗑")
+@router.message(F.text == "Удалить анкету 🌒")
 async def delete_profile(message: types.Message) -> None:
     # Заглушка — тут удаляйте из БД
     await message.answer("Анкета удалена. (заглушка)", reply_markup=main_menu_kb())
 
 
-@router.message(F.text == "Пожаловаться 🚫")
+@router.message(F.text == "Пожаловаться 🌓")
 async def complaint_menu(message: types.Message) -> None:
     kb = types.InlineKeyboardMarkup(
         inline_keyboard=[
