@@ -14,6 +14,7 @@ class SearchState(StatesGroup):
     choosing_mode = State()
     viewing_profiles = State()
     writing_message = State()
+    waiting_location = State()
 
 
 @router.message(Command("search"))
@@ -30,11 +31,9 @@ async def start_search(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     me = await get_user(user_id)
 
-    if not me or me.get("lat") is None or me.get("lon") is None:
-        await message.answer(
-            "Чтобы искать подруг, мне нужно знать, где ты. "
-            "Отправь свою локацию при заполнении анкеты."
-        )
+    # Локация нужна только для режима "рядом". Режим "везде" доступен всегда.
+    if not me:
+        await message.answer("Сначала создай анкету командой /start.")
         return
 
     await state.update_data(
@@ -53,10 +52,75 @@ async def start_search(message: types.Message, state: FSMContext):
     F.data.in_(["search_near", "search_all"]), SearchState.choosing_mode
 )
 async def process_mode_choice(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    lat = data.get("my_lat")
+    lon = data.get("my_lon")
+
+    if callback.data == "search_near" and (lat is None or lon is None):
+        await callback.answer()
+        await callback.message.answer(
+            "Чтобы искать рядом, пришли свою локацию.\n"
+            "Локация нужна только для режима «Рядом» — в режиме «Везде» она не требуется.",
+            reply_markup=types.ReplyKeyboardMarkup(
+                keyboard=[
+                    [
+                        types.KeyboardButton(
+                            text="Поделиться локацией 🚏", request_location=True
+                        )
+                    ],
+                    [types.KeyboardButton(text="Пропустить")],
+                ],
+                resize_keyboard=True,
+                one_time_keyboard=True,
+            ),
+        )
+        await state.set_state(SearchState.waiting_location)
+        return
+
     # При выборе режима поиска сбрасываем ранее просмотренные анкеты
     await state.update_data(search_mode=callback.data, seen_ids=[])
     await callback.message.delete()
     await show_next_profile(callback.message, state)
+
+
+@router.message(SearchState.waiting_location)
+async def handle_location_for_nearby(
+    message: types.Message, state: FSMContext
+):
+    """
+    Запрашиваем локацию только когда пользователь выбрал поиск "рядом".
+    """
+    if message.location:
+        lat = message.location.latitude
+        lon = message.location.longitude
+
+        from database import update_location
+
+        await update_location(message.from_user.id, lat, lon)
+        await state.update_data(my_lat=lat, my_lon=lon)
+
+        await message.answer(
+            "Локация получена. Ищу анкеты рядом…",
+            reply_markup=types.ReplyKeyboardRemove(),
+        )
+        await state.update_data(search_mode="search_near", seen_ids=[])
+        await state.set_state(SearchState.viewing_profiles)
+        await show_next_profile(message, state)
+        return
+
+    if message.text == "Пропустить":
+        await message.answer(
+            "Ок, тогда выбирай режим «Везде».",
+            reply_markup=types.ReplyKeyboardRemove(),
+        )
+        await state.set_state(SearchState.choosing_mode)
+        await message.answer(
+            "Как будем искать?",
+            reply_markup=get_location_choice_keyboard(),
+        )
+        return
+
+    await message.answer("Пришли локацию кнопкой ниже или нажми «Пропустить».")
 
 
 async def show_next_profile(message: types.Message, state: FSMContext):
@@ -206,14 +270,6 @@ async def handle_complaint(callback: types.CallbackQuery, bot):
 @router.callback_query(F.data == "next_search")
 async def handle_next(callback: types.CallbackQuery, state: FSMContext):
     await show_next_profile(callback.message, state)
-
-
-@router.callback_query(F.data == "start_search_after_profile")
-async def handle_start_search_after_profile(
-    callback: types.CallbackQuery, state: FSMContext
-):
-    await callback.answer()
-    await start_search(callback.message, state)
 
 
 @router.callback_query(F.data.startswith("msg_"))

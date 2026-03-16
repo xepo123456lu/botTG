@@ -1,4 +1,4 @@
-from keyboards import kb_geo, kb_skip, main_kb, get_search_kb, show_main_menu
+from keyboards import kb_skip, main_kb, get_search_kb, show_main_menu
 from aiogram import Router, F, types
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
@@ -16,7 +16,6 @@ class Form(StatesGroup):
     age = State()
     about = State()
     city = State()
-    location = State()
     photo = State()
     saving = State()
 
@@ -98,37 +97,12 @@ async def process_city(message: Message, state: FSMContext):
     # Сохраняем город в поле drink (колонка БД уже есть)
     await state.update_data(drink=city)
 
-    # Теперь переходим к локации
+    # Локацию НЕ спрашиваем при создании анкеты — она понадобится только для поиска "рядом".
     await message.answer(
-        "Поделись локацией, чтобы найти подруг рядом.",
-        reply_markup=kb_geo,
+        "Теперь пришли свое фото. Это обязательно!",
+        reply_markup=ReplyKeyboardRemove(),
     )
-    await state.set_state(Form.location)
-
-@router.message(Form.location)
-async def process_location(message: Message, state: FSMContext):
-    # Если пришла локация
-    if message.location:
-        # 1. Сразу меняем стейт, чтобы повторные нажатия не срабатывали
-        await state.set_state(Form.photo) 
-        
-        # 2. Сохраняем координаты
-        await state.update_data(lat=message.location.latitude, lon=message.location.longitude)
-        
-        # 3. Отвечаем пользователю
-        await message.answer(
-            "Локация получена! Теперь пришли свое фото.🫧🕯️ Это обязательно!", 
-            reply_markup=ReplyKeyboardRemove()
-        )
-        return # Выходим из функции
-
-    elif message.text == "Пропустить":
-        await state.set_state(Form.photo)
-        await state.update_data(lat=None, lon=None)
-        await message.answer("Пропускаем локацию. Пришли свое фото.", reply_markup=ReplyKeyboardRemove())
-        return
-
-# ... твой предыдущий код (process_location и т.д.)
+    await state.set_state(Form.photo)
 
 @router.message(Form.photo, F.photo)
 async def process_photo(message: Message, state: FSMContext):
@@ -162,21 +136,20 @@ async def process_photo(message: Message, state: FSMContext):
         text="Твоя анкета сохранена. Теперь ты можешь искать подруг!",
     )
 
-    # Кнопка "Поиск" после сохранения анкеты
-    search_kb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Найти подругу 🌖",
-                    callback_data="start_search_after_profile",
-                )
-            ]
-        ]
+    # После сохранения анкеты сразу предлагаем выбор режима поиска
+    from keyboards import get_location_choice_keyboard
+    from handlers.search import SearchState
+
+    await state.update_data(
+        my_lat=user_data.get("lat"),
+        my_lon=user_data.get("lon"),
+        seen_ids=[],
     )
-    await message.answer("Готова искать подруг?", reply_markup=search_kb)
-    
-    # 5. Сбрасываем состояние, чтобы пользователь мог пользоваться кнопками меню
-    await state.clear()
+    await message.answer(
+        "Как будем искать?",
+        reply_markup=get_location_choice_keyboard(),
+    )
+    await state.set_state(SearchState.choosing_mode)
 
 # Если пользователь продолжает слать фото/текст пока сохраняем анкету
 @router.message(Form.saving)

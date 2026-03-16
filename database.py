@@ -129,6 +129,24 @@ async def save_user(user_id, data):
         await conn.close()
 
 
+async def update_location(user_id: int, lat: float, lon: float) -> None:
+    """Обновляет только координаты пользователя"""
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        await conn.execute(
+            '''
+            UPDATE users
+            SET lat = $2, lon = $3
+            WHERE user_id = $1
+        ''',
+            user_id,
+            lat,
+            lon,
+        )
+    finally:
+        await conn.close()
+
+
 async def add_like(liker_id, liked_id):
     """Записывает лайк и проверяет на взаимность"""
     conn = await asyncpg.connect(DATABASE_URL)
