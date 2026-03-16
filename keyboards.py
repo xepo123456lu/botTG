@@ -9,25 +9,17 @@ from aiogram.types import (
 
 # ---------- ОСНОВНЫЕ КЛАВИАТУРЫ ----------
 
-# ГЛАВНОЕ МЕНЮ (Моя анкета / Найти подругу)
+# ГЛАВНОЕ МЕНЮ (Reply Keyboard, заменяет стандартную клавиатуру)
 main_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="Найти подругу 🔍")],
         [KeyboardButton(text="Моя анкета 👤")],
+        [KeyboardButton(text="Редактировать анкету ✏️")],
         [KeyboardButton(text="Удалить анкету 🗑")],
+        [KeyboardButton(text="Пожаловаться 🚫")],
     ],
     resize_keyboard=True,
     input_field_placeholder="Выбери действие...",
-)
-
-# Клавиатура анкеты (Редактировать / Сменить фото / В главное меню)
-profile_kb = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="Редактировать ✏️")],
-        [KeyboardButton(text="Сменить фото 🖼")],
-        [KeyboardButton(text="В главное меню ⬅️")],
-    ],
-    resize_keyboard=True,
 )
 
 # Клавиатура поиска (Лайк / Пропустить / В главное меню)
@@ -71,8 +63,6 @@ def get_search_kb(target_id: int) -> InlineKeyboardMarkup:
     Кнопки под конкретной анкетой:
     - Лайк
     - Дальше
-    - Пожаловаться
-    - Редактировать свою анкету
     """
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -82,16 +72,6 @@ def get_search_kb(target_id: int) -> InlineKeyboardMarkup:
                 ),
                 InlineKeyboardButton(
                     text="Дальше ➡️", callback_data="next_search"
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🚫 Пожаловаться",
-                    callback_data=f"complaint_{target_id}",
-                ),
-                InlineKeyboardButton(
-                    text="✏️ Редактировать анкету",
-                    callback_data="edit_profile",
                 ),
             ],
         ]
@@ -145,7 +125,7 @@ async def show_profile(
     photo_id: str | None = None,
 ) -> None:
     """
-    Показывает анкету пользователя с клавиатурой анкеты и убирает предыдущие кнопки.
+    Показывает анкету пользователя и возвращает главное меню.
     """
     await remove_keyboard(message)
 
@@ -154,11 +134,11 @@ async def show_profile(
             photo=photo_id,
             caption=caption,
             parse_mode="HTML",
-            reply_markup=profile_kb,
+            reply_markup=main_kb,
         )
     else:
         await message.answer(
             caption,
             parse_mode="HTML",
-            reply_markup=profile_kb,
+            reply_markup=main_kb,
         )

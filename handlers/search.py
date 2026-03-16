@@ -195,18 +195,6 @@ async def handle_complaint(callback: types.CallbackQuery, bot):
     await callback.answer("Жалоба отправлена модератору.", show_alert=True)
 
 
-@router.callback_query(F.data == "edit_profile")
-async def handle_edit_profile(callback: types.CallbackQuery, state: FSMContext):
-    """
-    Кнопка под анкетой "Редактировать анкету" — запускаем сценарий /start.
-    """
-    # Импортируем здесь, чтобы избежать циклического импорта роутеров
-    from handlers.registration import cmd_start
-
-    await callback.message.delete()
-    await cmd_start(callback.message, state)
-
-
 @router.callback_query(F.data == "next_search")
 async def handle_next(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.delete()
