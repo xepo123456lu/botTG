@@ -3,7 +3,7 @@ from aiogram import Router, F, types
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import ReplyKeyboardRemove, Message
+from aiogram.types import ReplyKeyboardRemove, Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 # Импортируем наши функции из новой database.py
 from database import user_exists, save_user
@@ -100,7 +100,7 @@ async def process_city(message: Message, state: FSMContext):
 
     # Теперь переходим к локации
     await message.answer(
-        "Где ты обычно бываешь? Поделись локацией, чтобы найти подруг рядом.",
+        "Поделись локацией, чтобы найти подруг рядом.",
         reply_markup=kb_geo,
     )
     await state.set_state(Form.location)
@@ -161,6 +161,19 @@ async def process_photo(message: Message, state: FSMContext):
         message,
         text="Твоя анкета сохранена. Теперь ты можешь искать подруг!",
     )
+
+    # Кнопка "Поиск" после сохранения анкеты
+    search_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Найти подругу 🌖",
+                    callback_data="start_search_after_profile",
+                )
+            ]
+        ]
+    )
+    await message.answer("Готова искать подруг?", reply_markup=search_kb)
     
     # 5. Сбрасываем состояние, чтобы пользователь мог пользоваться кнопками меню
     await state.clear()

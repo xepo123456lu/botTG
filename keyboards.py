@@ -65,6 +65,10 @@ def get_search_kb(target_id: int) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text="Дальше 🥀", callback_data="next_search"
                 ),
+                InlineKeyboardButton(
+                    text="Написать сообщение",
+                    callback_data=f"msg_{target_id}",
+                ),
             ],
         ]
     )

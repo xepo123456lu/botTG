@@ -1,5 +1,6 @@
 from aiogram import Router, F, types
 from aiogram.filters import Command
+import asyncio
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
@@ -12,6 +13,7 @@ router = Router()
 class SearchState(StatesGroup):
     choosing_mode = State()
     viewing_profiles = State()
+    writing_message = State()
 
 
 @router.message(Command("search"))
@@ -167,8 +169,12 @@ async def handle_like(callback: types.CallbackQuery, state: FSMContext, bot):
             reply_markup=kb_to_friend,
         )
     else:
-        await callback.answer("Лайк отправлен! 🦦")
+        await callback.answer(
+            "Твой лайк отправлен. Когда тебя лайкнут в ответ, у вас появится общий чат."
+        )
 
+    # Небольшая пауза перед показом следующей анкеты
+    await asyncio.sleep(5)
     await show_next_profile(callback.message, state)
 
 
@@ -199,5 +205,49 @@ async def handle_complaint(callback: types.CallbackQuery, bot):
 
 @router.callback_query(F.data == "next_search")
 async def handle_next(callback: types.CallbackQuery, state: FSMContext):
-    await callback.message.delete()
     await show_next_profile(callback.message, state)
+
+
+@router.callback_query(F.data == "start_search_after_profile")
+async def handle_start_search_after_profile(
+    callback: types.CallbackQuery, state: FSMContext
+):
+    await callback.answer()
+    await start_search(callback.message, state)
+
+
+@router.callback_query(F.data.startswith("msg_"))
+async def handle_start_message(callback: types.CallbackQuery, state: FSMContext):
+    """
+    Пользователь хочет отправить текстовое сообщение автору анкеты.
+    """
+    to_id = int(callback.data.split("_")[1])
+    await state.update_data(current_message_recipient=to_id)
+    await callback.answer()
+    await callback.message.answer(
+        "Напиши сообщение для неё (только текст, без фото)."
+    )
+    await state.set_state(SearchState.writing_message)
+
+
+@router.message(SearchState.writing_message)
+async def handle_send_message(
+    message: types.Message, state: FSMContext, bot: types.Bot
+):
+    data = await state.get_data()
+    to_id = data.get("current_message_recipient")
+
+    if not to_id:
+        await message.answer(
+            "Не удалось определить получателя сообщения. Попробуй выбрать анкету ещё раз."
+        )
+        await state.set_state(SearchState.viewing_profiles)
+        return
+
+    text = (
+        "Тебе новое сообщение от участницы:\n\n"
+        f"{message.text}"
+    )
+    await bot.send_message(chat_id=to_id, text=text)
+    await message.answer("Сообщение отправлено. ♥️")
+    await state.set_state(SearchState.viewing_profiles)
