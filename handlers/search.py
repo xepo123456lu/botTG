@@ -6,6 +6,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 from database import get_users_nearby, get_all_users, add_like, get_user
 from keyboards import get_search_kb, get_location_choice_keyboard, remove_keyboard
+from viewed_storage import get_viewed_ids, mark_viewed
 
 router = Router()
 
@@ -39,7 +40,6 @@ async def start_search(message: types.Message, state: FSMContext):
     await state.update_data(
         my_lat=me.get("lat"),
         my_lon=me.get("lon"),
-        seen_ids=[],
     )
 
     await message.answer(
@@ -79,8 +79,7 @@ async def process_mode_choice(callback: types.CallbackQuery, state: FSMContext):
 
     await callback.answer()
 
-    # При выборе режима поиска сбрасываем ранее просмотренные анкеты
-    await state.update_data(search_mode=callback.data, seen_ids=[])
+    await state.update_data(search_mode=callback.data)
     # Не удаляем сообщение жестко (иногда Telegram не даёт удалить) — просто убираем инлайн-кнопки.
     try:
         await callback.message.edit_reply_markup(reply_markup=None)
@@ -117,7 +116,7 @@ async def handle_location_for_nearby(
             "Локация получена. Ищу анкеты рядом…",
             reply_markup=types.ReplyKeyboardRemove(),
         )
-        await state.update_data(search_mode="search_near", seen_ids=[])
+        await state.update_data(search_mode="search_near")
         await state.set_state(SearchState.viewing_profiles)
         await show_next_profile(message, state)
         return
@@ -144,7 +143,7 @@ async def show_next_profile(message: types.Message, state: FSMContext):
     mode = data.get("search_mode")
     lat = data.get("my_lat")
     lon = data.get("my_lon")
-    seen_ids = list(data.get("seen_ids", []))
+    seen_ids = await get_viewed_ids(user_id)
 
     if mode == "search_near" and (lat is None or lon is None):
         await message.answer(
@@ -165,10 +164,6 @@ async def show_next_profile(message: types.Message, state: FSMContext):
     if friend:
         f_id, f_name, f_age, f_city, f_photo, f_about, f_lat, f_lon = friend
 
-        # Запоминаем, что этот профиль уже показан пользователю
-        seen_ids.append(f_id)
-        await state.update_data(seen_ids=seen_ids)
-
         dist_text = (
             "Рядом с тобой!" if mode == "search_near" else "🌍 Из любой точки"
         )
@@ -185,6 +180,7 @@ async def show_next_profile(message: types.Message, state: FSMContext):
             reply_markup=get_search_kb(f_id),
             parse_mode="HTML",
         )
+        await mark_viewed(user_id, f_id)
         await state.set_state(SearchState.viewing_profiles)
     else:
         await message.answer(

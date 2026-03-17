@@ -10,6 +10,7 @@ from aiogram.client.default import DefaultBotProperties
 
 import database
 from handlers import registration, profile, search, common
+from viewed_storage import init_viewed_db
 
 load_dotenv()
 
@@ -51,6 +52,7 @@ async def main():
 
     # База данных
     await database.init_db()
+    await init_viewed_db()
     
     print("Бот успешно запущен ✅")
     await dp.start_polling(bot)
