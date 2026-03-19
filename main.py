@@ -3,6 +3,7 @@ import asyncio
 from flask import Flask
 from threading import Thread
 from dotenv import load_dotenv
+import asyncpg
 
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
@@ -28,6 +29,38 @@ def run_flask():
 # --- 2. ОСНОВНОЙ КОД БОТА ---
 BOT_TOKEN = os.getenv("API_TOKEN")
 
+async def run_once_broadcast(bot: Bot) -> None:
+    """
+    Временная рассылка в рамках отладки/исправления бага.
+    """
+    text = """Привет подружка! ✨
+
+
+
+В приложении был баг, что текст который отправляли под аватаркой доходил до пользователя но они не могла открыть чат. 🌸
+
+
+
+Если твой вопрос остался без ответа — отправь его ещё раз, теперь чат откроется корректно. Приятного общения!"""
+
+    try:
+        conn = await asyncpg.connect(database.DATABASE_URL, timeout=15)
+        try:
+            rows = await conn.fetch("SELECT user_id FROM users")
+            user_ids = [int(r["user_id"]) for r in rows]
+        finally:
+            await conn.close()
+    except Exception:
+        return
+
+    for uid in user_ids:
+        try:
+            await bot.send_message(uid, text)
+        except Exception:
+            # Не прерываем рассылку, если бот заблокировали/пользователь недоступен.
+            pass
+        await asyncio.sleep(0.05)
+
 async def main():
     # Запускаем Flask
     Thread(target=run_flask, daemon=True).start()
@@ -43,6 +76,15 @@ async def main():
     )
     
     dp = Dispatcher()
+
+    # УДАЛИТЬ ЭТОТ БЛОК ПОСЛЕ ТОГО, КАК ПОЛУЧИШЬ СООБЩЕНИЕ В БОТЕ
+    async def on_startup(*args, **kwargs):
+        # aiogram может передать bot в аргументах/kwargs
+        bot_from_args = next((a for a in args if isinstance(a, Bot)), None)
+        bot_from_kwargs = kwargs.get("bot")
+        await run_once_broadcast(bot_from_kwargs or bot_from_args or bot)
+
+    dp.startup.register(on_startup)
 
     # Роутеры
     dp.include_router(registration.router)
