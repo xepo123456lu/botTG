@@ -325,10 +325,9 @@ async def handle_send_message(
         await state.set_state(SearchState.viewing_profiles)
         return
 
-    text = (
-        "Тебе новое сообщение от участницы:\n\n"
-        f"{message.text}"
-    )
+    # --- НОВЫЙ БЛОК: достаем анкету отправителя (тебя) ---
+    me = await get_user(sender_id)
+    
     kb_open_chat_with_sender = types.InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -339,10 +338,34 @@ async def handle_send_message(
             ]
         ]
     )
-    await bot.send_message(
-        chat_id=to_id,
-        text=text,
-        reply_markup=kb_open_chat_with_sender,
-    )
+
+    if me and me.get("photo_id"):
+        # Если анкета есть, шлем ФОТО + ТЕКСТ сообщения
+        caption_text = (
+            f"💌 <b>Новое сообщение для тебя:</b>\n\n"
+            f"<i>\"{message.text}\"</i>\n\n"
+            f"🏙 Город: {me.get('drink') or 'Не указано'}\n"
+            f"👤 От: {me.get('name')}, {me.get('age')}"
+        )
+        await bot.send_photo(
+            chat_id=to_id,
+            photo=me.get("photo_id"),
+            caption=caption_text,
+            reply_markup=kb_open_chat_with_sender,
+            parse_mode="HTML",
+        )
+    else:
+        # Если анкеты вдруг нет, шлем как раньше просто текст
+        text = (
+            "Тебе новое сообщение от участницы:\n\n"
+            f"{message.text}"
+        )
+        await bot.send_message(
+            chat_id=to_id,
+            text=text,
+            reply_markup=kb_open_chat_with_sender,
+        )
+    # --- КОНЕЦ НОВОГО БЛОКА ---
+
     await message.answer("Сообщение отправлено. ♥️")
     await state.set_state(SearchState.viewing_profiles)
