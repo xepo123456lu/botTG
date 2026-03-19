@@ -316,6 +316,7 @@ async def handle_send_message(
 ):
     data = await state.get_data()
     to_id = data.get("current_message_recipient")
+    sender_id = message.from_user.id
 
     if not to_id:
         await message.answer(
@@ -328,6 +329,20 @@ async def handle_send_message(
         "Тебе новое сообщение от участницы:\n\n"
         f"{message.text}"
     )
-    await bot.send_message(chat_id=to_id, text=text)
+    kb_open_chat_with_sender = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                types.InlineKeyboardButton(
+                    text="Открыть чат",
+                    url=f"tg://user?id={sender_id}",
+                )
+            ]
+        ]
+    )
+    await bot.send_message(
+        chat_id=to_id,
+        text=text,
+        reply_markup=kb_open_chat_with_sender,
+    )
     await message.answer("Сообщение отправлено. ♥️")
     await state.set_state(SearchState.viewing_profiles)
