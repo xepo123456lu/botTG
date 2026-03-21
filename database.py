@@ -137,7 +137,7 @@ async def save_user(user_id, data):
         await conn.close()
 
 async def update_user_status(user_id: int, status: str) -> None:
-    \"\"\"Обновляет статус модерации пользователя (pending/approved/rejected)\"\"\"
+    """Обновляет статус модерации пользователя (pending/approved/rejected)"""
     conn = await asyncpg.connect(DATABASE_URL)
     try:
         await conn.execute(
