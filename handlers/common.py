@@ -34,18 +34,7 @@ async def cmd_help(message: types.Message) -> None:
     await message.answer(text, reply_markup=kb)
 
 
-# ⚠️ ВРЕМЕННЫЙ ОБРАБОТЧИК - УДАЛИТЬ ПОСЛЕ ИСПОЛЬЗОВАНИЯ ⚠️
-@router.message(Command("myid"))
-async def cmd_myid(message: types.Message) -> None:
-    """
-    Показывает твой User ID в Telegram
-    ⚠️ УДАЛИТЬ ЭТОТ ОБРАБОТЧИК ПОСЛЕ ТОГО КАК УЗНАЛ ID ⚠️
-    """
-    user_id = message.from_user.id
-    await message.answer(
-        f"🆔 <b>Твой User ID:</b> <code>{user_id}</code>\n\n"
-        f"Скопируй это число и вставь в переменную окружения <code>ADMIN_ID</code>"
-    )
+# ⚠️ ВРЕМЕННАЯ РАССЫЛКА - УДАЛИТЬ ПОСЛЕ ИСПОЛЬЗОВАНИЯ ⚠️
 @router.message(Command("broadcast"))
 async def cmd_broadcast(message: types.Message) -> None:
     """
