@@ -10,7 +10,7 @@ from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties 
 
 import database
-from handlers import registration, profile, search, common
+from handlers import registration, profile, search, common, moderation
 from viewed_storage import init_viewed_db
 
 load_dotenv()
@@ -54,6 +54,7 @@ async def main():
     dp.include_router(registration.router)
     dp.include_router(profile.router)
     dp.include_router(search.router)
+    dp.include_router(moderation.router)
     dp.include_router(common.router)
 
     # База данных

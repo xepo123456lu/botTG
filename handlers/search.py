@@ -24,6 +24,7 @@ async def start_search(message: types.Message, state: FSMContext):
     """
     Обработка кнопки меню "Найти подругу 🌖":
     - убираем старую клавиатуру
+    - проверяем статус модерации
     - проверяем, есть ли координаты
     - спрашиваем режим поиска
     """
@@ -37,6 +38,30 @@ async def start_search(message: types.Message, state: FSMContext):
         await message.answer("Сначала создай анкету командой /start.")
         return
 
+    # 🔴 ПРОВЕРКА СТАТУСА МОДЕРАЦИИ
+    status = me.get("status", "pending")
+    
+    if status == "pending":
+        await message.answer(
+            "Твоя анкета ещё находится на модерации. 🕐\n"
+            "Мы пришлём уведомление, когда её одобрят! ✨"
+        )
+        await state.set_state(None)
+        return
+    
+    if status == "rejected":
+        await message.answer(
+            "К сожалению, твоя анкета не прошла модерацию. ❌\n"
+            "Попробуй перезаполнить её в профиле."
+        )
+        await state.set_state(None)
+        return
+    
+    if status != "approved":
+        await message.answer("Ошибка статуса. Свяжись с поддержкой.")
+        return
+
+    # ✅ СТАТУС OK - НАЧИНАЕМ ПОИСК
     await state.update_data(
         my_lat=me.get("lat"),
         my_lon=me.get("lon"),

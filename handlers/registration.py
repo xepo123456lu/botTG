@@ -4,9 +4,14 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import ReplyKeyboardRemove, Message, InlineKeyboardMarkup, InlineKeyboardButton
+import os
+from dotenv import load_dotenv
 
 # Импортируем наши функции из новой database.py
 from database import user_exists, save_user
+
+load_dotenv()
+ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))  # ← Укажи свой user_id в .env
 
 router = Router()
 
@@ -129,7 +134,53 @@ async def process_photo(message: Message, state: FSMContext):
     from database import save_user
     await save_user(user_id, user_data)
     
-    # 4. Выводим твой текст и главное меню, убирая старые кнопки
+    # 4. Отправляем сообщение пользователю
+    await message.answer("✨ Анкета заполнена! Отправили её на модерацию. ✨")
+    
+    # 5. 🔴 НОВОЕ: Отправляем анкету администратору на модерацию
+    if ADMIN_ID > 0:
+        from aiogram import Bot
+        bot = Bot(token=os.getenv("API_TOKEN"))
+        
+        # Создаем инлайн-клавиатуру с кнопками одобрения/отклонения
+        approve_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{user_id}"),
+                InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{user_id}")
+            ]
+        ])
+        
+        # Готовим текст для администратора
+        admin_text = (
+            f"📋 <b>Новая анкета на модерацию:</b>\n\n"
+            f"👤 <b>Имя:</b> {user_data.get('name')}\n"
+            f"🎂 <b>Возраст:</b> {user_data.get('age')}\n"
+            f"📍 <b>Город:</b> {user_data.get('drink') or 'Не указан'}\n"
+            f"📝 <b>О себе:</b> {user_data.get('about')}\n"
+            f"🆔 User ID: <code>{user_id}</code>"
+        )
+        
+        # Отправляем фото с кнопками действия (если фото есть)
+        try:
+            if user_data.get('photo_id'):
+                await bot.send_photo(
+                    chat_id=ADMIN_ID,
+                    photo=user_data.get('photo_id'),
+                    caption=admin_text,
+                    parse_mode="HTML",
+                    reply_markup=approve_keyboard
+                )
+            else:
+                await bot.send_message(
+                    chat_id=ADMIN_ID,
+                    text=admin_text,
+                    parse_mode="HTML",
+                    reply_markup=approve_keyboard
+                )
+        except Exception as e:
+            print(f"Ошибка при отправке анкеты администратору: {e}")
+    
+    # 6. Выводим твой текст и главное меню, убирая старые кнопки
     await message.answer("Красивое фото! ♥️")
     await show_main_menu(
         message,

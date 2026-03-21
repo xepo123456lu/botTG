@@ -18,7 +18,8 @@ async def init_db():
                 about TEXT,
                 photo_id TEXT,
                 lat FLOAT,
-                lon FLOAT
+                lon FLOAT,
+                status TEXT DEFAULT 'pending'
             )
         ''')
         await conn.close()
@@ -111,17 +112,17 @@ async def get_all_users(exclude_user_id, seen_ids=None):
         await conn.close()
 
 async def save_user(user_id, data):
-    """Сохраняет профиль (включая координаты)"""
+    """Сохраняет профиль (включая координаты) со статусом 'pending' для модерации"""
     conn = await asyncpg.connect(DATABASE_URL)
     try:
         await conn.execute(
             '''
-            INSERT INTO users (user_id, name, age, drink, about, photo_id, lat, lon)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO users (user_id, name, age, drink, about, photo_id, lat, lon, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
             ON CONFLICT (user_id) DO UPDATE 
             SET name = EXCLUDED.name, age = EXCLUDED.age, drink = EXCLUDED.drink, 
                 about = EXCLUDED.about, photo_id = EXCLUDED.photo_id,
-                lat = EXCLUDED.lat, lon = EXCLUDED.lon
+                lat = EXCLUDED.lat, lon = EXCLUDED.lon, status = EXCLUDED.status
         ''',
             user_id,
             data.get('name'),
@@ -135,6 +136,17 @@ async def save_user(user_id, data):
     finally:
         await conn.close()
 
+async def update_user_status(user_id: int, status: str) -> None:
+    \"\"\"Обновляет статус модерации пользователя (pending/approved/rejected)\"\"\"
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        await conn.execute(
+            'UPDATE users SET status = $1 WHERE user_id = $2',
+            status,
+            user_id
+        )
+    finally:
+        await conn.close()
 
 async def update_location(user_id: int, lat: float, lon: float) -> None:
     """Обновляет только координаты пользователя"""
@@ -185,5 +197,15 @@ async def delete_user(user_id):
             'DELETE FROM likes WHERE liker_id = $1 OR liked_id = $1', user_id
         )
         await conn.execute('DELETE FROM users WHERE user_id = $1', user_id)
+    finally:
+        await conn.close()
+
+
+async def get_all_user_ids():
+    """Получает список всех user_id из таблицы users"""
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        rows = await conn.fetch('SELECT user_id FROM users')
+        return [row['user_id'] for row in rows]
     finally:
         await conn.close()
