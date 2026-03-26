@@ -209,3 +209,15 @@ async def get_all_user_ids():
         return [row['user_id'] for row in rows]
     finally:
         await conn.close()
+
+
+async def approve_all_users():
+    """Активирует все анкеты (устанавливает статус 'approved' для всех пользователей)"""
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        result = await conn.execute(
+            "UPDATE users SET status = 'approved' WHERE status != 'approved'"
+        )
+        return result.split()[-1]  # Возвращает количество обновленных строк
+    finally:
+        await conn.close()

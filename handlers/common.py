@@ -34,52 +34,30 @@ async def cmd_help(message: types.Message) -> None:
     await message.answer(text, reply_markup=kb)
 
 
-# ⚠️ ВРЕМЕННАЯ РАССЫЛКА - УДАЛИТЬ ПОСЛЕ ИСПОЛЬЗОВАНИЯ ⚠️
-@router.message(Command("broadcast"))
-async def cmd_broadcast(message: types.Message) -> None:
+# ⚠️ ВРЕМЕННЫЙ ОБРАБОТЧИК - УДАЛИТЬ ПОСЛЕ АКТИВАЦИИ ⚠️
+@router.message(Command("activate_all"))
+async def cmd_activate_all(message: types.Message) -> None:
     """
-    Команда /broadcast - отправляет сообщение всем пользователям
-    ⚠️ УДАЛИТЬ ЭТОТ ОБРАБОТЧИК ПОСЛЕ РАССЫЛКИ ⚠️
+    Команда /activate_all - активирует все анкеты (устанавливает статус 'approved')
+    ⚠️ УДАЛИТЬ ЭТОТ ОБРАБОТЧИК ПОСЛЕ ИСПОЛЬЗОВАНИЯ ⚠️
     """
-    # Проверка: только админ может отправлять рассылки
+    # Проверка: только админ может активировать анкеты
     ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
     if message.from_user.id != ADMIN_ID:
         await message.answer("У тебя нет прав на эту команду.")
         return
 
-    from database import get_all_user_ids
-    from aiogram import Bot
-    
-    bot = Bot(token=os.getenv("API_TOKEN"))
-    user_ids = await get_all_user_ids()
-    
-    if not user_ids:
-        await message.answer("Нет пользователей для рассылки.")
-        return
+    from database import approve_all_users
 
-    # ⚠️ ТЕКСТ РАССЫЛКИ - УДАЛИТЬ ПОСЛЕ ИСПОЛЬЗОВАНИЯ ⚠️
-    broadcast_text = (
-        "Дорогая подружка, к сожалению в боте появились люди которые не должны были сюда попасть. "
-        "Мне очень грустно , что некоторые не уважают правила сообщества и лезут куда их не звали. "
-        "Поэтому Мы вводим обязательную авторизацию для новых пользователей. "
-        "Те кто уже зашел в бот мы пока не можем удалить, просто игнонируйте их"
-    )
-    
-    sent_count = 0
-    failed_count = 0
-    
-    for user_id in user_ids:
-        try:
-            await bot.send_message(chat_id=user_id, text=broadcast_text)
-            sent_count += 1
-        except Exception as e:
-            print(f"Ошибка при отправке юзеру {user_id}: {e}")
-            failed_count += 1
-
-    await message.answer(
-        f"✅ Рассылка завершена!\n"
-        f"Отправлено: {sent_count}\n"
-        f"Ошибок: {failed_count}\n\n"
-        f"⚠️ <b>ВАЖНО:</b> Удалите этот обработчик /broadcast из common.py после в файле рассылки!"
-    )
+    try:
+        updated_count = await approve_all_users()
+        await message.answer(
+            f"✅ <b>Все анкеты активированы!</b>\n\n"
+            f"Обновлено анкет: <code>{updated_count}</code>\n\n"
+            f"Теперь все пользователи могут искать подруг! 🌖\n\n"
+            f"⚠️ <b>ВАЖНО:</b> Удалите этот обработчик /activate_all из common.py!"
+        )
+    except Exception as e:
+        await message.answer(f"❌ Ошибка при активации: {e}")
+        print(f"Ошибка активации анкет: {e}")
 
